@@ -2,8 +2,6 @@
 
 namespace Tests\Feature;
 
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
 use Tests\TestCase;
 
 class ApiRouteTest extends TestCase
@@ -16,6 +14,6 @@ class ApiRouteTest extends TestCase
         $response = $this->getJson('/api');
 
         $response->assertStatus(200)
-                 ->assertJson(['status' => 'ok']);
+            ->assertJson(['status' => 'ok']);
     }
 }
