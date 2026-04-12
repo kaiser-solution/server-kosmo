@@ -2,8 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Models\DeviceFingerprint;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Livewire;
 use Tests\TestCase;
 
 class UserManagementTest extends TestCase
@@ -45,5 +47,72 @@ class UserManagementTest extends TestCase
         $response = $this->get('/users');
 
         $response->assertRedirect('/login');
+    }
+
+    /**
+     * Test that an admin can add a fingerprint to a user.
+     */
+    public function test_admin_can_add_fingerprint_to_user(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $user = User::factory()->create();
+
+        Livewire::actingAs($admin)
+            ->test('users.index')
+            ->call('manageFingerprints', $user->id)
+            ->set('newFingerprint', 'test-manual-fingerprint')
+            ->call('addFingerprint')
+            ->assertHasNoErrors()
+            ->assertSet('newFingerprint', '');
+
+        $this->assertDatabaseHas('device_fingerprints', [
+            'user_id' => $user->id,
+            'fingerprint' => 'test-manual-fingerprint',
+        ]);
+    }
+
+    /**
+     * Test that an admin can delete a fingerprint.
+     */
+    public function test_admin_can_delete_fingerprint(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $user = User::factory()->create();
+        $fingerprint = DeviceFingerprint::create([
+            'user_id' => $user->id,
+            'fingerprint' => 'fingerprint-to-delete',
+        ]);
+
+        Livewire::actingAs($admin)
+            ->test('users.index')
+            ->call('manageFingerprints', $user->id)
+            ->call('deleteFingerprint', $fingerprint->id)
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseMissing('device_fingerprints', [
+            'id' => $fingerprint->id,
+        ]);
+    }
+
+    /**
+     * Test that a fingerprint must be unique.
+     */
+    public function test_fingerprint_must_be_unique(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $user1 = User::factory()->create();
+        $user2 = User::factory()->create();
+
+        DeviceFingerprint::create([
+            'user_id' => $user1->id,
+            'fingerprint' => 'duplicate-fingerprint',
+        ]);
+
+        Livewire::actingAs($admin)
+            ->test('users.index')
+            ->call('manageFingerprints', $user2->id)
+            ->set('newFingerprint', 'duplicate-fingerprint')
+            ->call('addFingerprint')
+            ->assertHasErrors(['newFingerprint' => 'unique']);
     }
 }

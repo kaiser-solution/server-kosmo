@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\DeviceFingerprint;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
@@ -17,6 +18,8 @@ new class extends Component
     public $password = '';
     public $is_admin = false;
     public $editingUser = null;
+    public $managingFingerprintsUser = null;
+    public $newFingerprint = '';
 
     protected function rules()
     {
@@ -88,6 +91,33 @@ new class extends Component
 
         $user->delete();
     }
+
+    public function manageFingerprints(User $user)
+    {
+        $this->managingFingerprintsUser = $user;
+        $this->newFingerprint = '';
+        $this->modal('fingerprints-modal')->show();
+    }
+
+    public function addFingerprint()
+    {
+        $this->validate([
+            'newFingerprint' => 'required|string|unique:device_fingerprints,fingerprint',
+        ]);
+
+        $this->managingFingerprintsUser->fingerprints()->create([
+            'fingerprint' => $this->newFingerprint,
+        ]);
+
+        $this->newFingerprint = '';
+        $this->managingFingerprintsUser->load('fingerprints');
+    }
+
+    public function deleteFingerprint(DeviceFingerprint $fingerprint)
+    {
+        $fingerprint->delete();
+        $this->managingFingerprintsUser->load('fingerprints');
+    }
 };
 ?>
 
@@ -117,6 +147,7 @@ new class extends Component
                     </flux:table.cell>
                     <flux:table.cell>
                         <div class="flex items-center gap-2">
+                            <flux:button wire:click="manageFingerprints({{ $user->id }})" variant="ghost" size="sm" icon="key" square />
                             <flux:button wire:click="editUser({{ $user->id }})" variant="ghost" size="sm" icon="pencil" square />
                             @if ($user->id !== auth()->id())
                                 <flux:button wire:click="deleteUser({{ $user->id }})" variant="ghost" size="sm" icon="trash" color="red" square />
@@ -164,6 +195,60 @@ new class extends Component
                     <flux:button variant="ghost">Cancelar</flux:button>
                 </flux:modal.close>
                 <flux:button wire:click="save" variant="primary">Salvar</flux:button>
+            </div>
+        </div>
+    </flux:modal>
+
+    <flux:modal name="fingerprints-modal" class="md:w-[35rem]">
+        <div class="space-y-6">
+            <div>
+                <flux:heading size="lg">Gerenciar Fingerprints</flux:heading>
+                <flux:subheading>Visualizar e gerenciar impressões digitais do usuário: {{ $managingFingerprintsUser?->name }}</flux:subheading>
+            </div>
+
+            <div class="space-y-4">
+                <div class="flex gap-2">
+                    <flux:field class="flex-1">
+                        <flux:input wire:model="newFingerprint" placeholder="Digite novo fingerprint" />
+                        <flux:error name="newFingerprint" />
+                    </flux:field>
+                    <flux:button wire:click="addFingerprint" variant="primary">Adicionar</flux:button>
+                </div>
+
+                <div class="rounded-lg border border-zinc-200 dark:border-zinc-800">
+                    <flux:table>
+                        <flux:table.columns>
+                            <flux:table.column>Fingerprint</flux:table.column>
+                            <flux:table.column>Data</flux:table.column>
+                            <flux:table.column>Ações</flux:table.column>
+                        </flux:table.columns>
+
+                        <flux:table.rows>
+                            @if ($managingFingerprintsUser && $managingFingerprintsUser->fingerprints->isNotEmpty())
+                                @foreach ($managingFingerprintsUser->fingerprints as $fingerprint)
+                                    <flux:table.row :key="$fingerprint->id">
+                                        <flux:table.cell class="font-mono text-xs">{{ $fingerprint->fingerprint }}</flux:table.cell>
+                                        <flux:table.cell class="text-xs">{{ $fingerprint->created_at->format('d/m/Y H:i') }}</flux:table.cell>
+                                        <flux:table.cell>
+                                            <flux:button wire:click="deleteFingerprint({{ $fingerprint->id }})" variant="ghost" size="sm" icon="trash" color="red" square />
+                                        </flux:table.cell>
+                                    </flux:table.row>
+                                @endforeach
+                            @else
+                                <flux:table.row>
+                                    <flux:table.cell colspan="3" class="text-center text-zinc-500 py-4">Nenhum fingerprint cadastrado.</flux:table.cell>
+                                </flux:table.row>
+                            @endif
+                        </flux:table.rows>
+                    </flux:table>
+                </div>
+            </div>
+
+            <div class="flex gap-2">
+                <flux:spacer />
+                <flux:modal.close>
+                    <flux:button variant="ghost">Fechar</flux:button>
+                </flux:modal.close>
             </div>
         </div>
     </flux:modal>
