@@ -129,11 +129,12 @@ return [
     |--------------------------------------------------------------------------
     |
     | This URL is used to redirect users back to the third-party application
-    | after a successful device login. The {token} placeholder will be
-    | replaced with the user's plain text Sanctum token.
+    | after a successful device login. The {token} or {payload} placeholders
+    | will be replaced with the user's plain text Sanctum token or
+    | encrypted JSON payload (token + permissions).
     |
     */
 
-    'device_login_redirect_url' => env('DEVICE_LOGIN_REDIRECT_URL', 'api-kosmo://auth?token={token}'),
+    'device_login_redirect_url' => env('DEVICE_LOGIN_REDIRECT_URL', 'api-kosmo://auth?payload={payload}'),
 
 ];

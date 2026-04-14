@@ -36,10 +36,10 @@ class DeviceLoginController extends Controller
                 ]);
             }
 
-            // Restrição: apenas administradores
-            if (! $user->is_admin) {
+            // Restrição: apenas usuários normais (não administradores)
+            if ($user->is_admin) {
                 return response()->json([
-                    'message' => __('Only administrators can login.'),
+                    'message' => __('Administrators must login via management panel.'),
                 ], 403);
             }
 
@@ -76,10 +76,10 @@ class DeviceLoginController extends Controller
 
             $user = $existingFingerprint->user;
 
-            // Restrição: apenas administradores
-            if (! $user->is_admin) {
+            // Restrição: apenas usuários normais (não administradores)
+            if ($user->is_admin) {
                 return response()->json([
-                    'message' => __('Only administrators can login.'),
+                    'message' => __('Administrators must login via management panel.'),
                 ], 403);
             }
         }
@@ -93,7 +93,13 @@ class DeviceLoginController extends Controller
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
+                'phone' => $user->phone,
+                'regulatory_bodies' => $user->regulatory_bodies,
+                'credentials' => $user->credentials,
+                'specialties' => $user->specialties,
+                'description' => $user->description,
                 'is_admin' => $user->is_admin,
+                'permissions' => $user->permissions->pluck('slug')->toArray(),
             ],
         ]);
     }

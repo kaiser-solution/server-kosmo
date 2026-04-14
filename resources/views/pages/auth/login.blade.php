@@ -20,7 +20,6 @@
                     autocomplete="email"
                     placeholder="email@example.com"
                 />
-                <flux:error name="email" />
             </flux:field>
 
             <!-- Password -->
@@ -42,7 +41,6 @@
                         </flux:link>
                     @endif
                 </div>
-                <flux:error name="password" />
             </flux:field>
 
             <!-- Remember Me -->

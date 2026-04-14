@@ -19,6 +19,10 @@
                     <flux:sidebar.item icon="users" :href="route('users.index')" :current="request()->routeIs('users.index')" wire:navigate>
                         {{ __('Usuários') }}
                     </flux:sidebar.item>
+
+                    <flux:sidebar.item icon="shield-check" :href="route('permissions.index')" :current="request()->routeIs('permissions.index')" wire:navigate>
+                        {{ __('Permissões') }}
+                    </flux:sidebar.item>
                 </flux:sidebar.group>
             </flux:sidebar.nav>
 

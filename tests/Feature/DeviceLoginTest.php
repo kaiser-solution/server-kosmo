@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\DeviceFingerprint;
+use App\Models\Permission;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -16,13 +17,14 @@ class DeviceLoginTest extends TestCase
      */
     public function test_successful_device_login_associates_fingerprint(): void
     {
-        $user = User::factory()->admin()->create([
-            'email' => 'admin@example.com',
+        $user = User::factory()->create([
+            'email' => 'user@example.com',
             'password' => bcrypt('password'),
+            'is_admin' => false,
         ]);
 
         $response = $this->postJson('/api/device-login', [
-            'email' => 'admin@example.com',
+            'email' => 'user@example.com',
             'password' => 'password',
             'fingerprint' => 'pc-unique-id-123',
         ]);
@@ -41,9 +43,10 @@ class DeviceLoginTest extends TestCase
      */
     public function test_login_with_existing_fingerprint_for_same_user(): void
     {
-        $user = User::factory()->admin()->create([
-            'email' => 'admin@example.com',
+        $user = User::factory()->create([
+            'email' => 'user@example.com',
             'password' => bcrypt('password'),
+            'is_admin' => false,
         ]);
 
         DeviceFingerprint::create([
@@ -52,7 +55,7 @@ class DeviceLoginTest extends TestCase
         ]);
 
         $response = $this->postJson('/api/device-login', [
-            'email' => 'admin@example.com',
+            'email' => 'user@example.com',
             'password' => 'password',
             'fingerprint' => 'existing-id',
         ]);
@@ -66,32 +69,12 @@ class DeviceLoginTest extends TestCase
      */
     public function test_login_fails_if_fingerprint_belongs_to_another_user(): void
     {
-        $otherUser = User::factory()->admin()->create();
+        $otherUser = User::factory()->create(['is_admin' => false]);
         DeviceFingerprint::create([
             'user_id' => $otherUser->id,
             'fingerprint' => 'stolen-id',
         ]);
 
-        $user = User::factory()->admin()->create([
-            'email' => 'admin@example.com',
-            'password' => bcrypt('password'),
-        ]);
-
-        $response = $this->postJson('/api/device-login', [
-            'email' => 'admin@example.com',
-            'password' => 'password',
-            'fingerprint' => 'stolen-id',
-        ]);
-
-        $response->assertStatus(403)
-            ->assertJson(['message' => 'This device is already associated with another account.']);
-    }
-
-    /**
-     * Test login fails if user is not an admin.
-     */
-    public function test_login_fails_if_user_is_not_admin(): void
-    {
         $user = User::factory()->create([
             'email' => 'user@example.com',
             'password' => bcrypt('password'),
@@ -101,17 +84,17 @@ class DeviceLoginTest extends TestCase
         $response = $this->postJson('/api/device-login', [
             'email' => 'user@example.com',
             'password' => 'password',
-            'fingerprint' => 'some-id',
+            'fingerprint' => 'stolen-id',
         ]);
 
         $response->assertStatus(403)
-            ->assertJson(['message' => 'Only administrators can login.']);
+            ->assertJson(['message' => 'This device is already associated with another account.']);
     }
 
     /**
-     * Test login fails with wrong credentials.
+     * Test login fails if user is an admin.
      */
-    public function test_login_fails_with_wrong_credentials(): void
+    public function test_login_fails_if_user_is_admin(): void
     {
         $user = User::factory()->admin()->create([
             'email' => 'admin@example.com',
@@ -120,6 +103,27 @@ class DeviceLoginTest extends TestCase
 
         $response = $this->postJson('/api/device-login', [
             'email' => 'admin@example.com',
+            'password' => 'password',
+            'fingerprint' => 'some-id',
+        ]);
+
+        $response->assertStatus(403)
+            ->assertJson(['message' => 'Administrators must login via management panel.']);
+    }
+
+    /**
+     * Test login fails with wrong credentials.
+     */
+    public function test_login_fails_with_wrong_credentials(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'user@example.com',
+            'password' => bcrypt('password'),
+            'is_admin' => false,
+        ]);
+
+        $response = $this->postJson('/api/device-login', [
+            'email' => 'user@example.com',
             'password' => 'wrong-password',
             'fingerprint' => 'some-id',
         ]);
@@ -132,7 +136,7 @@ class DeviceLoginTest extends TestCase
      */
     public function test_login_with_only_fingerprint_for_registered_device(): void
     {
-        $user = User::factory()->admin()->create();
+        $user = User::factory()->create(['is_admin' => false]);
         DeviceFingerprint::create([
             'user_id' => $user->id,
             'fingerprint' => 'known-fingerprint',
@@ -161,11 +165,11 @@ class DeviceLoginTest extends TestCase
     }
 
     /**
-     * Test login fails with fingerprint if user was revoked admin status.
+     * Test login fails with fingerprint if user is an admin.
      */
-    public function test_login_fails_with_fingerprint_if_user_no_longer_admin(): void
+    public function test_login_fails_with_fingerprint_if_user_is_admin(): void
     {
-        $user = User::factory()->create(['is_admin' => false]);
+        $user = User::factory()->admin()->create();
         DeviceFingerprint::create([
             'user_id' => $user->id,
             'fingerprint' => 'known-fingerprint',
@@ -176,6 +180,63 @@ class DeviceLoginTest extends TestCase
         ]);
 
         $response->assertStatus(403)
-            ->assertJson(['message' => 'Only administrators can login.']);
+            ->assertJson(['message' => 'Administrators must login via management panel.']);
+    }
+
+    /**
+     * Test that the login response contains all required user data.
+     */
+    public function test_login_response_contains_all_required_user_data(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'user@example.com',
+            'is_admin' => false,
+            'phone' => '123456789',
+            'regulatory_bodies' => 'Body A',
+            'credentials' => 'Cred 123',
+            'specialties' => 'Spec X',
+            'description' => 'Desc Y',
+        ]);
+
+        $response = $this->postJson('/api/device-login', [
+            'email' => 'user@example.com',
+            'password' => 'password',
+            'fingerprint' => 'test-fingerprint',
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJson([
+                'user' => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => 'user@example.com',
+                    'phone' => '123456789',
+                    'regulatory_bodies' => 'Body A',
+                    'credentials' => 'Cred 123',
+                    'specialties' => 'Spec X',
+                    'description' => 'Desc Y',
+                    'is_admin' => false,
+                    'permissions' => [],
+                ],
+            ]);
+    }
+
+    /**
+     * Test that the login response contains user permissions.
+     */
+    public function test_login_response_contains_user_permissions(): void
+    {
+        $user = User::factory()->create(['is_admin' => false]);
+        $permission = Permission::create(['name' => 'Test', 'slug' => 'test-permission']);
+        $user->permissions()->attach($permission);
+
+        $response = $this->postJson('/api/device-login', [
+            'email' => $user->email,
+            'password' => 'password',
+            'fingerprint' => 'test-fingerprint',
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJsonFragment(['permissions' => ['test-permission']]);
     }
 }
