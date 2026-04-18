@@ -23,6 +23,10 @@
                     <flux:sidebar.item icon="shield-check" :href="route('permissions.index')" :current="request()->routeIs('permissions.index')" wire:navigate>
                         {{ __('Permissões') }}
                     </flux:sidebar.item>
+
+                    <flux:sidebar.item icon="shield-check" :href="route('applications.index')" :current="request()->routeIs('applications.index')" wire:navigate>
+                        {{ __('Aplicações') }}
+                    </flux:sidebar.item>
                 </flux:sidebar.group>
             </flux:sidebar.nav>
 
