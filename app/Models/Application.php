@@ -13,10 +13,26 @@ class Application extends BaseModel
     use HasFactory, HasTimestamps;
 
     protected static array $fields = [
-        'name',
-        'namespace',
-        'description',
-        'endpoint',
+        'name' => [
+            'label' => 'Nome',
+            'type' => 'text',
+            'rules' => 'required|string|max:255',
+        ],
+        'namespace' => [
+            'label' => 'Namespace',
+            'type' => 'text',
+            'rules' => 'required|string|max:255',
+        ],
+        'description' => [
+            'label' => 'Descrição',
+            'type' => 'text',
+            'rules' => 'nullable|string',
+        ],
+        'endpoint' => [
+            'label' => 'Endpoint',
+            'type' => 'text',
+            'rules' => 'required|string',
+        ],
     ];
 
     public function plan()
