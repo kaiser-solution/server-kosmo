@@ -1,118 +1,54 @@
 <?php
 
+use App\Livewire\Abstracts\CrudComponent;
 use App\Models\Application;
-use Illuminate\Validation\Rule;
-use Livewire\Attributes\Computed;
-use Livewire\Component;
-use Livewire\WithPagination;
-use Illuminate\Support\Str;
 
-new class extends Component
+new class extends CrudComponent
 {
-    use WithPagination;
+    public string $modelClass = Application::class;
+    public string $pageTitle = 'Gerenciamento de Aplicações';
+    public string $newButtonTitle = 'Nova Aplicação';
+    public string $searchPlaceholder = 'Buscar aplicações...';
+    public string $editModalTitle = 'Editar Aplicação';
+    public string $createModalTitle = 'Nova Aplicação';
+    public string $deleteModalTitle = 'Excluir Aplicação';
+    public array $columnsToDisplay = [
+        'name' => 'Nome',
+        'endpoint' => 'Endpoint',
+    ];
 
-    public $q = '';
-    public $name = '';
-    public $slug = '';
-    public $editingApplicationId = null;
 
-
-    protected function rules()
-    {
-        return [
-            'name' => 'required|string|max:255',
-        ];
-    }
-
-    #[Computed]
-    public function editingApplication()
-    {
-        return $this->editingApplicationId ? Application::find($this->editingApplicationId) : null;
-    }
-
-    #[Computed]
-    public function applications()
-    {
-        return Application::query()
-            ->when($this->q, function ($query) {
-                $query->where('name', 'like', '%'.$this->q.'%');
-            })
-            ->paginate(10);
-    }
-
-    public function createApplication()
-    {
-        $this->reset(['name', 'slug', '']);
-        $this->modal('application-modal')->show();
-    }
-
-    public function editApplication(Application $application)
-    {
-        $this->editingApplicationId = $application->id;
-        $this->name = $application->name;
-        $this->slug = $application->slug;
-
-        $this->modal('application-modal')->show();
-    }
-
-    public function updatedName($value)
-    {
-        if (!$this->editingApplicationId) {
-            $this->slug = Str::slug($value);
-        }
-    }
-
-    public function save()
-    {
-        $this->validate();
-
-        if ($this->editingApplicationId && $application = $this->editingApplication) {
-            $application->update([
-                'name' => $this->name,
-                'slug' => $this->slug,
-            ]);
-        } else {
-            Application::create([
-                'name' => $this->name,
-                'slug' => $this->slug,
-            ]);
-        }
-
-        $this->modal('application-modal')->close();
-        $this->reset(['name', 'slug', 'editingApplicationId']);
-    }
-
-    public function deleteApplication(Application $application)
-    {
-        $application->delete();
-    }
 };
 ?>
 
 <section class="w-full">
     <div class="flex items-center justify-between mb-6">
         <div class="flex items-center gap-4">
-            <flux:heading size="xl" level="1">Gerenciamento de Aplicações</flux:heading>
-            <flux:input type="search" name="search_{{ Str::random(10) }}" wire:model.live.debounce.300ms="q" placeholder="Buscar permissões..." icon="magnifying-glass" size="sm" class="w-64" autocomplete="off"  />
+            <flux:heading size="xl" level="1">{{ $this->pageTitle }}</flux:heading>
+            <flux:input type="search" name="search_{{ Str::random(10) }}" wire:model.live.debounce.300ms="q" placeholder="{{ $this->searchPlaceholder }}" icon="magnifying-glass" size="sm" class="w-50" autocomplete="off"  />
         </div>
-        <flux:button wire:click="createApplication" variant="primary" icon="plus">Nova Aplicação</flux:button>
+        <flux:button wire:click="create" variant="primary" icon="plus">{{ $this->newButtonTitle }}</flux:button>
     </div>
 
-    <flux:table :paginate="$this->applications">
+    <flux:table :paginate="$this->items">
         <flux:table.columns>
-            <flux:table.column>Nome</flux:table.column>
-            <flux:table.column>Ações</flux:table.column>
+            @foreach ($columnsToDisplay as $key => $column)
+                <flux:table.column>{{ $column }}</flux:table.column>
+            @endforeach
+            <flux:table.column>{{ $this->actionsColumnTitle }}</flux:table.column>
         </flux:table.columns>
 
         <flux:table.rows>
-            @foreach ($this->applications as $application)
-                <flux:table.row :key="$application->id">
-                    <flux:table.cell variant="strong">{{ $application->name }}</flux:table.cell>
+            @foreach ($this->items as $item)
+                <flux:table.row :key="$item->id">
+                    @foreach ($columnsToDisplay as $key => $column)
+                        <flux:table.cell variant="strong">{{ $item->$key }}</flux:table.cell>
+                    @endforeach
 
                     <flux:table.cell>
                         <div class="flex items-center gap-2">
-                            <flux:button wire:click="editApplication({{ $application->id }})" variant="ghost" size="sm" icon="pencil" square />
-                            <flux:button wire:click="deleteApplication({{ $application->id }})" variant="ghost" size="sm" icon="trash" color="red" square />
+                            <flux:button wire:click="edit({{ $item->id }})" variant="ghost" size="sm" icon="pencil" square />
+                            <flux:button wire:click="delete({{ $item->id }})" variant="ghost" size="sm" icon="trash" color="red" square />
                         </div>
                     </flux:table.cell>
                 </flux:table.row>
@@ -120,32 +56,33 @@ new class extends Component
         </flux:table.rows>
     </flux:table>
 
-    <flux:modal name="application-modal" class="md:w-[25rem]">
+    <flux:modal name="crud-modal" class="md:w-[25rem]">
         <div class="space-y-6">
             <div>
-                <flux:heading size="lg">{{ $editingApplicationId ? 'Editar Permissão' : 'Nova Permissão' }}</flux:heading>
-                <flux:subheading>As permissões são usadas para controlar o acesso no sistema.</flux:subheading>
+                <flux:heading size="lg">{{ $editingId ? $this->editModalTitle : $this->createModalTitle }}</flux:heading>
+                @if ($this->modalSubtitle)
+                    <flux:subheading>{{ $this->modalSubtitle }}</flux:subheading>
+                @endif
             </div>
 
-            <flux:field>
-                <flux:label>Nome</flux:label>
-                <flux:input wire:model.live="name" placeholder="Ex: Criar Usuários" />
-                <flux:error name="name" />
-            </flux:field>
+            @foreach($this->fields() as $name => $field)
+                <flux:field>
+                    <flux:label>{{ $field['label'] }}</flux:label>
 
-            <flux:field>
-                <flux:label>Slug (Chave)</flux:label>
-                <flux:input wire:model="slug" placeholder="Ex: criar-usuarios" />
-                <flux:subheading>A chave é usada internamente no código para verificações.</flux:subheading>
-                <flux:error name="slug" />
-            </flux:field>
+                    <flux:input
+                        type="{{ $field['type'] }}"
+                        wire:model="data.{{ $name }}"
+                    />
 
+                    <flux:error name="data.{{ $name }}" />
+                </flux:field>
+            @endforeach
             <div class="flex gap-2">
                 <flux:spacer />
                 <flux:modal.close>
-                    <flux:button variant="ghost">Cancelar</flux:button>
+                    <flux:button variant="ghost">{{ $this->cancelButtonText }}</flux:button>
                 </flux:modal.close>
-                <flux:button wire:click="save" variant="primary">Salvar</flux:button>
+                <flux:button wire:click="save" variant="primary">{{ $this->okButtonText }}</flux:button>
             </div>
         </div>
     </flux:modal>
