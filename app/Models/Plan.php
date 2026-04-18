@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Database\Factories\PlanFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasTimestamps;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -10,7 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 #[Fillable('name', 'description', 'price', 'currency')]
 class Plan extends Model
 {
-    /** @use HasFactory<\Database\Factories\PlanFactory> */
+    /** @use HasFactory<PlanFactory> */
     use HasFactory, HasTimestamps;
 
     protected static array $fields = [
@@ -24,9 +25,9 @@ class Plan extends Model
     {
         return $this->belongsToMany(Application::class, 'application_plan');
     }
+
     public function users()
     {
         return $this->belongsToMany(User::class, 'plan_user');
     }
-
 }

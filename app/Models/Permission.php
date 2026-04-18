@@ -28,6 +28,7 @@ class Permission extends BaseModel
     {
         return $this->belongsToMany(Plan::class, 'permission_plan');
     }
+
     public function applications()
     {
         return $this->belongsToMany(Application::class, 'permission_application');
