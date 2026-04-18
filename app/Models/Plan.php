@@ -13,6 +13,13 @@ class Plan extends Model
     /** @use HasFactory<\Database\Factories\PlanFactory> */
     use HasFactory, HasTimestamps;
 
+    protected static array $fields = [
+        'name' => 'string',
+        'description' => 'string',
+        'price' => 'float',
+        'currency' => 'string',
+    ];
+
     public function applications()
     {
         return $this->belongsToMany(Application::class, 'application_plan');

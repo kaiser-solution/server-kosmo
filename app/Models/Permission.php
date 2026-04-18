@@ -2,18 +2,22 @@
 
 namespace App\Models;
 
+use App\Models\Abstract\BaseModel;
 use Database\Factories\PermissionFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasTimestamps;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 
 #[Fillable('name', 'slug')]
-class Permission extends Model
+class Permission extends BaseModel
 {
     /** @use HasFactory<PermissionFactory> */
-    use HasFactory,HasTimestamps;
+    use HasFactory, HasTimestamps;
 
+    protected static array $fields = [
+        'name' => 'string',
+        'slug' => 'string',
+    ];
 
     public function users()
     {

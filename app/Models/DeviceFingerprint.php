@@ -2,13 +2,16 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Attributes\Fillable;
-use Illuminate\Database\Eloquent\Model;
+use App\Models\Abstract\BaseModel;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['user_id', 'fingerprint'])]
-class DeviceFingerprint extends Model
+class DeviceFingerprint extends BaseModel
 {
+    protected static array $fields = [
+        'user_id' => 'int',
+        'fingerprint' => 'string',
+    ];
+
     /**
      * Get the user that owns the fingerprint.
      *
