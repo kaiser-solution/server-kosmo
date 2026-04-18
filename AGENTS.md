@@ -185,4 +185,12 @@ This project has domain-specific skills available. You MUST activate the relevan
 - To run all tests in a file: `php artisan test --compact tests/Feature/ExampleTest.php`.
 - To filter on a particular test name: `php artisan test --compact --filter=testName` (recommended after making a change to a related file).
 
+=== docker rules ===
+
+# Docker
+
+- All shell commands executed by the agent MUST be prefixed with `docker compose exec app` to run inside the container.
+- To start the application container, you must run `docker compose up -d`.
+- If the service is not running, the agent should inform the user or try to run the command with `docker compose run --rm app` if appropriate.
+
 </laravel-boost-guidelines>
