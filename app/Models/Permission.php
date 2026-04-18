@@ -15,8 +15,17 @@ class Permission extends BaseModel
     use HasFactory, HasTimestamps;
 
     protected static array $fields = [
-        'name' => 'string',
-        'slug' => 'string',
+        'name' => [
+            'label' => 'Nome',
+            'type' => 'text',
+            'rules' => 'required|string|max:255',
+            'live' => true,
+        ],
+        'slug' => [
+            'label' => 'Slug (Chave)',
+            'type' => 'text',
+            'rules' => 'required|string|max:255',
+        ],
     ];
 
     public function users()

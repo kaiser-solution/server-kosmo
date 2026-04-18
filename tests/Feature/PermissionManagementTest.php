@@ -21,8 +21,8 @@ class PermissionManagementTest extends TestCase
 
         Livewire::actingAs($admin)
             ->test('permissions.index')
-            ->set('name', 'My New Permission')
-            ->set('slug', 'my-new-permission')
+            ->set('data.name', 'My New Permission')
+            ->set('data.slug', 'my-new-permission')
             ->call('save')
             ->assertHasNoErrors();
 
@@ -41,8 +41,8 @@ class PermissionManagementTest extends TestCase
 
         Livewire::actingAs($admin)
             ->test('permissions.index')
-            ->set('name', 'Test Permission')
-            ->assertSet('slug', 'test-permission');
+            ->set('data.name', 'Test Permission')
+            ->assertSet('data.slug', 'test-permission');
     }
 
     /**
