@@ -108,4 +108,14 @@ class User extends BaseAuthenticableModel
     {
         return $this->belongsToMany(Plan::class, 'plan_user');
     }
+
+    /**
+     * Get the profiles associated with the user.
+     *
+     * @return HasMany<UserProfile, $this>
+     */
+    public function profiles(): HasMany
+    {
+        return $this->hasMany(UserProfile::class);
+    }
 }

@@ -25,8 +25,11 @@ new class extends CrudComponent
 
     public $managingFingerprintsUserId = null;
     public $managingPlansUserId = null;
+    public $managingProfilesUserId = null;
     public $newFingerprint = '';
     public $userPlans = []; // [id => bool]
+    public $newProfileName = '';
+    public $newProfilePin = '';
 
     public function rules()
     {
@@ -71,6 +74,41 @@ new class extends CrudComponent
     public function managingFingerprintsUser()
     {
         return $this->managingFingerprintsUserId ? User::find($this->managingFingerprintsUserId) : null;
+    }
+
+    #[Computed]
+    public function managingProfilesUser()
+    {
+        return $this->managingProfilesUserId ? User::with('profiles')->find($this->managingProfilesUserId) : null;
+    }
+
+    public function manageProfiles($userId)
+    {
+        $this->managingProfilesUserId = $userId;
+        $this->newProfileName = '';
+        $this->newProfilePin = '';
+        $this->modal('profiles-modal')->show();
+    }
+
+    public function addProfile()
+    {
+        $this->validate([
+            'newProfileName' => 'required|string|max:255',
+            'newProfilePin' => 'nullable|string|min:4|max:8',
+        ]);
+
+        $this->managingProfilesUser->profiles()->create([
+            'name' => $this->newProfileName,
+            'pin' => $this->newProfilePin ?: null,
+        ]);
+
+        $this->newProfileName = '';
+        $this->newProfilePin = '';
+    }
+
+    public function deleteProfile($profileId)
+    {
+        \App\Models\UserProfile::findOrFail($profileId)->delete();
     }
 
     #[Computed]
@@ -170,6 +208,7 @@ new class extends CrudComponent
                     </flux:table.cell>
                     <flux:table.cell>
                         <div class="flex items-center gap-2">
+                            <flux:button wire:click="manageProfiles({{ $user->id }})" variant="ghost" size="sm" icon="user-circle" square />
                             <flux:button wire:click="managePlans({{ $user->id }})" variant="ghost" size="sm" icon="credit-card" square />
                             <flux:button wire:click="manageFingerprints({{ $user->id }})" variant="ghost" size="sm" icon="key" square />
                             <flux:button wire:click="edit({{ $user->id }})" variant="ghost" size="sm" icon="pencil" square />
@@ -189,6 +228,70 @@ new class extends CrudComponent
         :createModalTitle="$createModalTitle"
         class="md:w-[40rem]"
     />
+
+    <flux:modal name="profiles-modal" class="md:w-[40rem]">
+        <div class="space-y-6">
+            <div>
+                <flux:heading size="lg">Gerenciar Perfis</flux:heading>
+                <flux:subheading>Perfis de acesso do usuário: {{ $this->managingProfilesUser?->name }}</flux:subheading>
+            </div>
+
+            <div class="space-y-4">
+                <div class="flex gap-2">
+                    <flux:field class="flex-1">
+                        <flux:input wire:model="newProfileName" placeholder="Nome do perfil" />
+                        <flux:error name="newProfileName" />
+                    </flux:field>
+                    <flux:field class="w-36">
+                        <flux:input wire:model="newProfilePin" type="password" placeholder="PIN (opcional)" />
+                        <flux:error name="newProfilePin" />
+                    </flux:field>
+                    <flux:button wire:click="addProfile" variant="primary">Adicionar</flux:button>
+                </div>
+
+                <div class="rounded-lg border border-zinc-200 dark:border-zinc-800">
+                    <flux:table>
+                        <flux:table.columns>
+                            <flux:table.column>Nome</flux:table.column>
+                            <flux:table.column>Avatar</flux:table.column>
+                            <flux:table.column>PIN</flux:table.column>
+                            <flux:table.column>Ações</flux:table.column>
+                        </flux:table.columns>
+
+                        <flux:table.rows>
+                            @if ($this->managingProfilesUser && $this->managingProfilesUser->profiles->isNotEmpty())
+                                @foreach ($this->managingProfilesUser->profiles as $profile)
+                                    <flux:table.row :key="$profile->id">
+                                        <flux:table.cell>{{ $profile->name }}</flux:table.cell>
+                                        <flux:table.cell>{{ $profile->avatar ?? '—' }}</flux:table.cell>
+                                        <flux:table.cell>
+                                            <flux:badge :color="$profile->getRawOriginal('pin') ? 'green' : 'gray'" size="sm">
+                                                {{ $profile->getRawOriginal('pin') ? 'Sim' : 'Não' }}
+                                            </flux:badge>
+                                        </flux:table.cell>
+                                        <flux:table.cell>
+                                            <flux:button wire:click="deleteProfile({{ $profile->id }})" variant="ghost" size="sm" icon="trash" color="red" square />
+                                        </flux:table.cell>
+                                    </flux:table.row>
+                                @endforeach
+                            @else
+                                <flux:table.row>
+                                    <flux:table.cell colspan="4" class="text-center text-zinc-500 py-4">Nenhum perfil cadastrado.</flux:table.cell>
+                                </flux:table.row>
+                            @endif
+                        </flux:table.rows>
+                    </flux:table>
+                </div>
+            </div>
+
+            <div class="flex gap-2">
+                <flux:spacer />
+                <flux:modal.close>
+                    <flux:button variant="ghost">Fechar</flux:button>
+                </flux:modal.close>
+            </div>
+        </div>
+    </flux:modal>
 
     <flux:modal name="fingerprints-modal" class="md:w-[35rem]">
         <div class="space-y-6">

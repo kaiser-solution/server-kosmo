@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Application;
 use App\Models\DeviceFingerprint;
 use App\Models\User;
+use App\Models\UserProfile;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -26,6 +27,8 @@ class DeviceLoginController extends Controller
             'app' => 'nullable|string|exists:applications,namespace',
             'email' => 'nullable|email',
             'password' => 'nullable|string',
+            'profile_id' => 'nullable|integer|exists:user_profiles,id',
+            'pin' => 'nullable|string',
         ]);
 
         $application = $request->filled('app')
@@ -38,6 +41,11 @@ class DeviceLoginController extends Controller
             return response()->json([
                 'message' => __('Administrators must login via management panel.'),
             ], 403);
+        }
+
+        $profile = null;
+        if ($request->filled('profile_id')) {
+            $profile = $this->resolveProfile($user, (int) $request->profile_id, $request->pin);
         }
 
         $token = $user->createToken($request->fingerprint)->plainTextToken;
@@ -62,8 +70,35 @@ class DeviceLoginController extends Controller
                 'description' => $user->description,
                 'is_admin' => $user->is_admin,
                 'permissions' => $permissions,
+                'profile' => $profile ? [
+                    'id' => $profile->id,
+                    'name' => $profile->name,
+                    'avatar' => $profile->avatar,
+                ] : null,
             ],
         ]);
+    }
+
+    /**
+     * Resolve and validate a profile belonging to the user.
+     */
+    private function resolveProfile(User $user, int $profileId, ?string $pin): UserProfile
+    {
+        $profile = $user->profiles()->find($profileId);
+
+        if (! $profile) {
+            abort(response()->json([
+                'message' => __('Profile not found or does not belong to this user.'),
+            ], 404));
+        }
+
+        if ($profile->pin && ! Hash::check((string) $pin, $profile->pin)) {
+            abort(response()->json([
+                'message' => __('Invalid PIN for this profile.'),
+            ], 403));
+        }
+
+        return $profile;
     }
 
     /**

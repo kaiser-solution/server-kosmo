@@ -24,12 +24,16 @@
                         {{ __('Permissões') }}
                     </flux:sidebar.item>
 
-                    <flux:sidebar.item icon="shield-check" :href="route('applications.index')" :current="request()->routeIs('applications.index')" wire:navigate>
+                    <flux:sidebar.item icon="squares-2x2" :href="route('applications.index')" :current="request()->routeIs('applications.index')" wire:navigate>
                         {{ __('Aplicações') }}
                     </flux:sidebar.item>
 
                     <flux:sidebar.item icon="credit-card" :href="route('plans.index')" :current="request()->routeIs('plans.index')" wire:navigate>
                         {{ __('Planos') }}
+                    </flux:sidebar.item>
+
+                    <flux:sidebar.item icon="user-circle" :href="route('user-profiles.index')" :current="request()->routeIs('user-profiles.index')" wire:navigate>
+                        {{ __('Perfis de Acesso') }}
                     </flux:sidebar.item>
                 </flux:sidebar.group>
             </flux:sidebar.nav>

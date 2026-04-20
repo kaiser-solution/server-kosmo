@@ -12,6 +12,7 @@ Route::middleware(['auth', 'verified', 'admin'])->group(function () {
     Route::view('users', 'pages.users.index')->name('users.index');
     Route::view('permissions', 'pages.permissions.index')->name('permissions.index');
     Route::view('plans', 'pages.plans.index')->name('plans.index');
+    Route::view('user-profiles', 'pages.user-profiles.index')->name('user-profiles.index');
     Route::resource('applications', ApplicationController::class)->names('applications');
 });
 
