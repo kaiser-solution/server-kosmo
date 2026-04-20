@@ -11,14 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('plans', function (Blueprint $table) {
-            $table->id();
-            $table->string('name');
-            $table->text('description')->nullable();
-            $table->integer('price');
-            $table->string('currency');
-            $table->timestamps();
-        });
+        Schema::dropIfExists('permission_user');
     }
 
     /**
@@ -26,6 +19,11 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('plans');
+        Schema::create('permission_user', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('permission_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->timestamps();
+        });
     }
 };

@@ -9,6 +9,7 @@ class DeviceFingerprint extends BaseModel
 {
     protected static array $fields = [
         'user_id' => 'int',
+        'application_id' => 'int',
         'fingerprint' => 'string',
     ];
 
@@ -20,5 +21,15 @@ class DeviceFingerprint extends BaseModel
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Get the application associated with the fingerprint.
+     *
+     * @return BelongsTo<Application, $this>
+     */
+    public function application(): BelongsTo
+    {
+        return $this->belongsTo(Application::class);
     }
 }

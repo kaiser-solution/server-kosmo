@@ -4,11 +4,9 @@ namespace App\Models;
 
 use App\Models\Abstract\BaseModel;
 use Database\Factories\PermissionFactory;
-use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasTimestamps;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
-#[Fillable('name', 'slug')]
 class Permission extends BaseModel
 {
     /** @use HasFactory<PermissionFactory> */
@@ -26,20 +24,25 @@ class Permission extends BaseModel
             'type' => 'text',
             'rules' => 'required|string|max:255',
         ],
+        'application_id' => [
+            'label' => 'Aplicação',
+            'type' => 'select',
+            'rules' => 'required|exists:applications,id',
+        ],
     ];
-
-    public function users()
-    {
-        return $this->belongsToMany(User::class);
-    }
 
     public function plans()
     {
         return $this->belongsToMany(Plan::class, 'permission_plan');
     }
 
-    public function applications()
+    public function application()
     {
-        return $this->belongsToMany(Application::class, 'permission_application');
+        return $this->belongsTo(Application::class);
+    }
+
+    public function getApplicationNameAttribute(): string
+    {
+        return $this->application?->name ?? '-';
     }
 }

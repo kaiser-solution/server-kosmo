@@ -35,13 +35,13 @@ class Application extends BaseModel
         ],
     ];
 
-    public function plan()
+    public function plans()
     {
         return $this->belongsToMany(Plan::class, 'application_plan');
     }
 
     public function permissions()
     {
-        return $this->belongsToMany(Permission::class, 'application_permission');
+        return $this->hasMany(Permission::class);
     }
 }

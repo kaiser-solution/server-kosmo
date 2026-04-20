@@ -21,15 +21,51 @@ class User extends BaseAuthenticableModel
     use HasApiTokens, HasFactory, Notifiable, TwoFactorAuthenticatable;
 
     protected static array $fields = [
-        'name' => 'string',
-        'email' => 'string',
-        'password' => 'string',
-        'is_admin' => 'boolean',
-        'phone' => 'string',
-        'regulatory_bodies' => 'string',
-        'credentials' => 'string',
-        'specialties' => 'string',
-        'description' => 'string',
+        'name' => [
+            'label' => 'Nome',
+            'type' => 'text',
+            'rules' => 'required|string|max:255',
+        ],
+        'email' => [
+            'label' => 'Email',
+            'type' => 'email',
+            'rules' => 'required|string|email|max:255',
+        ],
+        'password' => [
+            'label' => 'Senha',
+            'type' => 'password',
+            'rules' => 'required|string|min:8',
+        ],
+        'phone' => [
+            'label' => 'Telefone',
+            'type' => 'text',
+            'rules' => 'nullable|string|max:255',
+        ],
+        'is_admin' => [
+            'label' => 'Administrador',
+            'type' => 'boolean',
+            'rules' => 'boolean',
+        ],
+        'regulatory_bodies' => [
+            'label' => 'Órgãos Reguladores/Centralizadores',
+            'type' => 'text',
+            'rules' => 'nullable|string',
+        ],
+        'credentials' => [
+            'label' => 'Credenciais',
+            'type' => 'text',
+            'rules' => 'nullable|string',
+        ],
+        'specialties' => [
+            'label' => 'Especialidades',
+            'type' => 'text',
+            'rules' => 'nullable|string',
+        ],
+        'description' => [
+            'label' => 'Descrição',
+            'type' => 'textarea',
+            'rules' => 'nullable|string',
+        ],
     ];
 
     /**
@@ -66,16 +102,6 @@ class User extends BaseAuthenticableModel
     public function fingerprints(): HasMany
     {
         return $this->hasMany(DeviceFingerprint::class);
-    }
-
-    /**
-     * Get the permissions associated with the user.
-     *
-     * @return BelongsToMany<Permission, $this>
-     */
-    public function permissions(): BelongsToMany
-    {
-        return $this->belongsToMany(Permission::class);
     }
 
     public function plans(): BelongsToMany
