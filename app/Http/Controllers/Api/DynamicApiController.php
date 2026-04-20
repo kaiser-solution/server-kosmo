@@ -26,7 +26,6 @@ class DynamicApiController extends Controller
             return response()->json(['message' => 'Application not found'], 404);
         }
 
-        // dd($application);
         return response()->json([
             'status' => 'success',
             'application' => $application['name'],
