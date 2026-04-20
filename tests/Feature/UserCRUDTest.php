@@ -20,12 +20,12 @@ class UserCRUDTest extends TestCase
 
         Livewire::actingAs($admin)
             ->test('users.index')
-            ->call('createUser')
-            ->set('name', 'John Doe')
-            ->set('email', 'john@example.com')
-            ->set('phone', '123456789')
-            ->set('password', 'password123')
-            ->set('is_admin', false)
+            ->call('create')
+            ->set('data.name', 'John Doe')
+            ->set('data.email', 'john@example.com')
+            ->set('data.phone', '123456789')
+            ->set('data.password', 'password123')
+            ->set('data.is_admin', false)
             ->call('save')
             ->assertHasNoErrors();
 
@@ -47,8 +47,8 @@ class UserCRUDTest extends TestCase
 
         Livewire::actingAs($admin)
             ->test('users.index')
-            ->call('editUser', $user->id)
-            ->set('name', 'New Name')
+            ->call('edit', $user->id)
+            ->set('data.name', 'New Name')
             ->call('save')
             ->assertHasNoErrors();
 
@@ -64,10 +64,10 @@ class UserCRUDTest extends TestCase
 
         Livewire::actingAs($admin)
             ->test('users.index')
-            ->call('editUser', $admin->id)
-            ->set('is_admin', false)
+            ->call('edit', $admin->id)
+            ->set('data.is_admin', false)
             ->call('save')
-            ->assertSet('is_admin', true); // Should be reverted
+            ->assertSet('data.is_admin', true); // Should be reverted
 
         $this->assertTrue($admin->fresh()->is_admin);
     }
@@ -81,7 +81,7 @@ class UserCRUDTest extends TestCase
 
         Livewire::actingAs($admin)
             ->test('users.index')
-            ->call('deleteUser', $admin->id);
+            ->call('delete', $admin->id);
 
         $this->assertDatabaseHas('users', ['id' => $admin->id]);
     }

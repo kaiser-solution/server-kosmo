@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\DeviceFingerprint;
+use App\Models\Plan;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -11,6 +12,30 @@ use Tests\TestCase;
 class UserManagementTest extends TestCase
 {
     use RefreshDatabase;
+
+    /**
+     * Test that an admin can manage user plans.
+     */
+    public function test_admin_can_manage_user_plans(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $user = User::factory()->create();
+        $plan1 = Plan::create(['name' => 'Plan 1', 'price' => 10, 'currency' => 'BRL']);
+        $plan2 = Plan::create(['name' => 'Plan 2', 'price' => 20, 'currency' => 'BRL']);
+
+        Livewire::actingAs($admin)
+            ->test('users.index')
+            ->call('managePlans', $user->id)
+            ->assertSet('userPlans', [])
+            ->set('userPlans.'.$plan1->id, true)
+            ->set('userPlans.'.$plan2->id, true)
+            ->call('savePlans')
+            ->assertHasNoErrors();
+
+        $this->assertEquals(2, $user->fresh()->plans()->count());
+        $this->assertTrue($user->fresh()->plans->contains($plan1));
+        $this->assertTrue($user->fresh()->plans->contains($plan2));
+    }
 
     /**
      * Test that an admin user can access the user management page.
