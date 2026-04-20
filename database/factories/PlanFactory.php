@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\Application;
 use App\Models\Plan;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -18,11 +19,11 @@ class PlanFactory extends Factory
     public function definition(): array
     {
         return [
+            'application_id' => Application::factory(),
             'name' => $this->faker->name(),
             'description' => $this->faker->paragraph(),
             'price' => $this->faker->randomFloat(2),
-            'currency' => $this->faker->randomElement(['BRL','USD'])
-        
+            'currency' => $this->faker->randomElement(['BRL', 'USD']),
         ];
     }
 }
