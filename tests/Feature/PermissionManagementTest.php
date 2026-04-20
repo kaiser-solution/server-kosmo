@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Application;
 use App\Models\Permission;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -18,17 +19,20 @@ class PermissionManagementTest extends TestCase
     public function test_admin_can_create_permission(): void
     {
         $admin = User::factory()->admin()->create();
+        $application = Application::factory()->create();
 
         Livewire::actingAs($admin)
             ->test('permissions.index')
             ->set('data.name', 'My New Permission')
             ->set('data.slug', 'my-new-permission')
+            ->set('data.application_id', $application->id)
             ->call('save')
             ->assertHasNoErrors();
 
         $this->assertDatabaseHas('permissions', [
             'name' => 'My New Permission',
             'slug' => 'my-new-permission',
+            'application_id' => $application->id,
         ]);
     }
 
@@ -51,60 +55,14 @@ class PermissionManagementTest extends TestCase
     public function test_permission_search(): void
     {
         $admin = User::factory()->admin()->create();
-        Permission::create(['name' => 'First', 'slug' => 'first']);
-        Permission::create(['name' => 'Second', 'slug' => 'second']);
+        $application = Application::factory()->create();
+        Permission::create(['name' => 'First', 'slug' => 'first', 'application_id' => $application->id]);
+        Permission::create(['name' => 'Second', 'slug' => 'second', 'application_id' => $application->id]);
 
         Livewire::actingAs($admin)
             ->test('permissions.index')
             ->set('q', 'First')
             ->assertSee('First')
             ->assertDontSee('Second');
-    }
-
-    /**
-     * Test that an admin can manage user permissions.
-     */
-    public function test_admin_can_manage_user_permissions(): void
-    {
-        $admin = User::factory()->admin()->create();
-        $user = User::factory()->create();
-
-        $permission1 = Permission::create(['name' => 'View Users', 'slug' => 'view-users']);
-        $permission2 = Permission::create(['name' => 'Edit Users', 'slug' => 'edit-users']);
-
-        Livewire::actingAs($admin)
-            ->test('users.index')
-            ->call('managePermissions', $user->id)
-            ->assertSet('userPermissions', [])
-            ->set('userPermissions.'.$permission1->id, true)
-            ->set('userPermissions.'.$permission2->id, true)
-            ->call('savePermissions')
-            ->assertHasNoErrors();
-
-        $this->assertEquals(2, $user->fresh()->permissions()->count());
-        $this->assertTrue($user->fresh()->permissions->contains($permission1));
-        $this->assertTrue($user->fresh()->permissions->contains($permission2));
-    }
-
-    /**
-     * Test that an admin can remove user permissions.
-     */
-    public function test_admin_can_remove_user_permissions(): void
-    {
-        $admin = User::factory()->admin()->create();
-        $user = User::factory()->create();
-
-        $permission = Permission::create(['name' => 'View Users', 'slug' => 'view-users']);
-        $user->permissions()->attach($permission);
-
-        Livewire::actingAs($admin)
-            ->test('users.index')
-            ->call('managePermissions', $user->id)
-            ->assertSet('userPermissions', [(string) $permission->id => true])
-            ->set('userPermissions.'.$permission->id, false)
-            ->call('savePermissions')
-            ->assertHasNoErrors();
-
-        $this->assertEquals(0, $user->fresh()->permissions()->count());
     }
 }

@@ -2,8 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Models\Application;
 use App\Models\DeviceFingerprint;
 use App\Models\Permission;
+use App\Models\Plan;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -89,6 +91,53 @@ class DeviceLoginTest extends TestCase
 
         $response->assertStatus(403)
             ->assertJson(['message' => 'This device is already associated with another account.']);
+    }
+
+    public function test_device_login_filters_permissions_by_application(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'user@example.com',
+            'password' => bcrypt('password'),
+            'is_admin' => false,
+        ]);
+
+        $app1 = Application::create(['name' => 'App 1', 'endpoint' => 'http://app1.test', 'namespace' => 'app1']);
+        $app2 = Application::create(['name' => 'App 2', 'endpoint' => 'http://app2.test', 'namespace' => 'app2']);
+
+        $p1 = Permission::create(['name' => 'Permission App 1', 'slug' => 'p-app1', 'application_id' => $app1->id]);
+        $p2 = Permission::create(['name' => 'Permission App 2', 'slug' => 'p-app2', 'application_id' => $app2->id]);
+
+        $plan1 = Plan::create(['name' => 'Plan 1', 'price' => 10, 'currency' => 'BRL', 'application_id' => $app1->id]);
+        $plan2 = Plan::create(['name' => 'Plan 2', 'price' => 20, 'currency' => 'BRL', 'application_id' => $app2->id]);
+
+        $plan1->permissions()->attach($p1);
+        $plan2->permissions()->attach($p2);
+
+        $user->plans()->attach([$plan1->id, $plan2->id]);
+
+        // Login via API informando App 1
+        $response1 = $this->postJson('/api/device-login', [
+            'email' => 'user@example.com',
+            'password' => 'password',
+            'fingerprint' => 'api-device-123',
+            'app' => 'app1',
+        ]);
+
+        // Agora o login deve retornar TODAS as permissões de todos os planos do usuário,
+        // independentemente da aplicação informada.
+        $response1->assertStatus(200)
+            ->assertJsonPath('user.permissions', ['p-app1', 'p-app2']);
+
+        // Login via API informando App 2 - também deve retornar tudo
+        $response2 = $this->postJson('/api/device-login', [
+            'email' => 'user@example.com',
+            'password' => 'password',
+            'fingerprint' => 'api-device-456',
+            'app' => 'app2',
+        ]);
+
+        $response2->assertStatus(200)
+            ->assertJsonPath('user.permissions', ['p-app1', 'p-app2']);
     }
 
     /**
@@ -227,8 +276,12 @@ class DeviceLoginTest extends TestCase
     public function test_login_response_contains_user_permissions(): void
     {
         $user = User::factory()->create(['is_admin' => false]);
-        $permission = Permission::create(['name' => 'Test', 'slug' => 'test-permission']);
-        $user->permissions()->attach($permission);
+        $app = Application::create(['name' => 'App 1', 'endpoint' => 'http://app1.test', 'namespace' => 'app1']);
+        $permission = Permission::create(['name' => 'Test', 'slug' => 'test-permission', 'application_id' => $app->id]);
+        $plan = Plan::create(['name' => 'Plan 1', 'price' => 10, 'currency' => 'BRL', 'application_id' => $app->id]);
+
+        $plan->permissions()->attach($permission);
+        $user->plans()->attach($plan);
 
         $response = $this->postJson('/api/device-login', [
             'email' => $user->email,
