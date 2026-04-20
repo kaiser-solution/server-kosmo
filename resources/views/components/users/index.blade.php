@@ -1,67 +1,70 @@
 <?php
 
 use App\Models\DeviceFingerprint;
-use App\Models\Permission;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
-use Livewire\Component;
-use Livewire\WithPagination;
+use App\Livewire\Abstracts\CrudComponent;
 use Flux\Flux;
 use Illuminate\Support\Str;
 
-new class extends Component
+new class extends CrudComponent
 {
-    use WithPagination;
+    public string $modelClass = User::class;
+    public string $pageTitle = 'Gerenciamento de Usuários';
+    public string $newButtonTitle = 'Novo Usuário';
+    public string $searchPlaceholder = 'Buscar usuários...';
+    public string $editModalTitle = 'Editar Usuário';
+    public string $createModalTitle = 'Novo Usuário';
+    public string $deleteModalTitle = 'Excluir Usuário';
+    public array $columnsToDisplay = [
+        'name' => 'Nome',
+        'email' => 'Email',
+    ];
 
-    public $q = '';
-    public $name = '';
-    public $email = '';
-    public $phone = '';
-    public $regulatory_bodies = '';
-    public $credentials = '';
-    public $specialties = '';
-    public $description = '';
-    public $password = '';
-    public $is_admin = false;
-    public $editingUserId = null;
     public $managingFingerprintsUserId = null;
-    public $managingPermissionsUserId = null;
+    public $managingPlansUserId = null;
     public $newFingerprint = '';
-    public $userPermissions = []; // [id => bool]
+    public $userPlans = []; // [id => bool]
 
-    protected function rules()
+    public function rules()
     {
-        return [
-            'name' => 'required|string|max:255',
-            'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($this->editingUserId)],
-            'phone' => 'nullable|string|max:255',
-            'regulatory_bodies' => 'nullable|string',
-            'credentials' => 'nullable|string',
-            'specialties' => 'nullable|string',
-            'description' => 'nullable|string',
-            'password' => $this->editingUserId ? 'nullable|string|min:8' : 'required|string|min:8',
-            'is_admin' => 'boolean',
-            'userPermissions' => 'array',
-        ];
+        $rules = parent::rules();
+        $rules['data.email'] .= '|'.Rule::unique('users', 'email')->ignore($this->editingId);
+
+        if ($this->editingId) {
+            $rules['data.password'] = 'nullable|string|min:8';
+        }
+
+        return $rules;
     }
 
-    #[Computed]
-    public function editingUser()
+    public function beforeSave()
     {
-        return $this->editingUserId ? User::find($this->editingUserId) : null;
+        if ($this->editingId === auth()->id() && ! $this->data['is_admin']) {
+            $this->data['is_admin'] = true;
+            Flux::toast(
+                text: 'Você não pode remover seu próprio acesso administrativo.',
+                variant: 'error',
+            );
+
+            return false;
+        }
     }
 
-    #[Computed]
-    public function users()
+    public function delete($id)
     {
-        return User::query()
-            ->when($this->q, function ($query) {
-                $query->where('name', 'like', '%'.$this->q.'%')
-                    ->orWhere('email', 'like', '%'.$this->q.'%');
-            })
-            ->paginate(10);
+        if ($id === auth()->id()) {
+            Flux::toast(
+                text: 'Você não pode excluir sua própria conta.',
+                variant: 'error',
+            );
+
+            return;
+        }
+
+        parent::delete($id);
     }
 
     #[Computed]
@@ -71,96 +74,15 @@ new class extends Component
     }
 
     #[Computed]
-    public function managingPermissionsUser()
+    public function managingPlansUser()
     {
-        return $this->managingPermissionsUserId ? User::find($this->managingPermissionsUserId) : null;
+        return $this->managingPlansUserId ? User::find($this->managingPlansUserId) : null;
     }
 
     #[Computed]
-    public function allPermissions()
+    public function allPlans()
     {
-        return Permission::all();
-    }
-
-    public function createUser()
-    {
-        $this->reset(['name', 'email', 'phone', 'regulatory_bodies', 'credentials', 'specialties', 'description', 'password', 'is_admin', 'editingUserId']);
-        $this->modal('user-modal')->show();
-    }
-
-    public function editUser($userId)
-    {
-        $user = User::findOrFail($userId);
-        $this->editingUserId = $user->id;
-        $this->name = $user->name;
-        $this->email = $user->email;
-        $this->phone = $user->phone;
-        $this->regulatory_bodies = $user->regulatory_bodies;
-        $this->credentials = $user->credentials;
-        $this->specialties = $user->specialties;
-        $this->description = $user->description;
-        $this->password = '';
-        $this->is_admin = $user->is_admin;
-
-        $this->modal('user-modal')->show();
-    }
-
-    public function save()
-    {
-        $data = $this->validate();
-
-        if ($this->editingUserId === auth()->id() && ! $this->is_admin) {
-            $this->is_admin = true;
-            Flux::toast(
-                text: 'Você não pode remover seu próprio acesso administrativo.',
-                variant: 'error',
-            );
-
-            return;
-        }
-
-        if ($this->editingUserId && $user = $this->editingUser) {
-            $updateData = [
-                'name' => $this->name,
-                'email' => $this->email,
-                'phone' => $this->phone,
-                'regulatory_bodies' => $this->regulatory_bodies,
-                'credentials' => $this->credentials,
-                'specialties' => $this->specialties,
-                'description' => $this->description,
-                'is_admin' => $this->is_admin,
-            ];
-
-            if ($this->password) {
-                $updateData['password'] = Hash::make($this->password);
-            }
-
-            $user->update($updateData);
-        } else {
-            User::create([
-                'name' => $this->name,
-                'email' => $this->email,
-                'phone' => $this->phone,
-                'regulatory_bodies' => $this->regulatory_bodies,
-                'credentials' => $this->credentials,
-                'specialties' => $this->specialties,
-                'description' => $this->description,
-                'password' => Hash::make($this->password),
-                'is_admin' => $this->is_admin,
-            ]);
-        }
-
-        $this->modal('user-modal')->close();
-        $this->reset(['name', 'email', 'phone', 'regulatory_bodies', 'credentials', 'specialties', 'description', 'password', 'is_admin', 'editingUserId']);
-    }
-
-    public function deleteUser($userId)
-    {
-        if ($userId === auth()->id()) {
-            return;
-        }
-
-        User::findOrFail($userId)->delete();
+        return \App\Models\Plan::all();
     }
 
     public function manageFingerprints($userId)
@@ -188,27 +110,27 @@ new class extends Component
         DeviceFingerprint::findOrFail($fingerprintId)->delete();
     }
 
-    public function managePermissions($userId)
+    public function managePlans($userId)
     {
-        $user = User::with('permissions')->findOrFail($userId);
-        $this->managingPermissionsUserId = $user->id;
-        $this->userPermissions = $user->permissions->pluck('id')->mapWithKeys(fn ($id) => [(string) $id => true])->toArray();
-        $this->modal('permissions-user-modal')->show();
+        $user = User::with('plans')->findOrFail($userId);
+        $this->managingPlansUserId = $user->id;
+        $this->userPlans = $user->plans->pluck('id')->mapWithKeys(fn ($id) => [(string) $id => true])->toArray();
+        $this->modal('plans-user-modal')->show();
     }
 
-    public function savePermissions()
+    public function savePlans()
     {
-        if ($user = $this->managingPermissionsUser) {
-            $permissionIds = array_keys(array_filter($this->userPermissions));
-            $user->permissions()->sync($permissionIds);
+        if ($user = $this->managingPlansUser) {
+            $planIds = array_keys(array_filter($this->userPlans));
+            $user->plans()->sync($planIds);
         }
 
-        $this->modal('permissions-user-modal')->close();
+        $this->modal('plans-user-modal')->close();
 
-        $this->reset(['managingPermissionsUserId', 'userPermissions']);
+        $this->reset(['managingPlansUserId', 'userPlans']);
 
         Flux::toast(
-            text: 'Permissões atualizadas com sucesso.',
+            text: 'Planos atualizados com sucesso.',
             variant: 'success',
         );
     }
@@ -220,25 +142,27 @@ new class extends Component
         <div class="flex items-center gap-4">
             <input type="text" style="display:none">
             <input type="password" style="display:none">
-            <flux:heading size="xl" level="1">Gerenciamento de Usuários</flux:heading>
-            <flux:input type="search" name="search_{{ Str::random(10) }}" wire:model.live.debounce.300ms="q" placeholder="Buscar usuários..." icon="magnifying-glass" size="sm" class="w-64" autocomplete="off"  />
+            <flux:heading size="xl" level="1">{{ $this->pageTitle }}</flux:heading>
+            <flux:input type="search" name="search_{{ Str::random(10) }}" wire:model.live.debounce.300ms="q" placeholder="{{ $this->searchPlaceholder }}" icon="magnifying-glass" size="sm" class="w-64" autocomplete="off"  />
         </div>
-        <flux:button wire:click="createUser" variant="primary" icon="plus">Novo Usuário</flux:button>
+        <flux:button wire:click="create" variant="primary" icon="plus">{{ $this->newButtonTitle }}</flux:button>
     </div>
 
-    <flux:table :paginate="$this->users">
+    <flux:table :paginate="$this->items">
         <flux:table.columns>
-            <flux:table.column>Nome</flux:table.column>
-            <flux:table.column>Email</flux:table.column>
+            @foreach($this->columnsToDisplay as $column => $label)
+                <flux:table.column>{{ $label }}</flux:table.column>
+            @endforeach
             <flux:table.column>Admin</flux:table.column>
             <flux:table.column>Ações</flux:table.column>
         </flux:table.columns>
 
         <flux:table.rows>
-            @foreach ($this->users as $user)
+            @foreach ($this->items as $user)
                 <flux:table.row :key="$user->id">
-                    <flux:table.cell>{{ $user->name }}</flux:table.cell>
-                    <flux:table.cell>{{ $user->email }}</flux:table.cell>
+                    @foreach($this->columnsToDisplay as $column => $label)
+                        <flux:table.cell>{{ $user->{$column} }}</flux:table.cell>
+                    @endforeach
                     <flux:table.cell>
                         <flux:badge :color="$user->is_admin ? 'green' : 'gray'" size="sm">
                             {{ $user->is_admin ? 'Sim' : 'Não' }}
@@ -246,11 +170,11 @@ new class extends Component
                     </flux:table.cell>
                     <flux:table.cell>
                         <div class="flex items-center gap-2">
-                            <flux:button wire:click="managePermissions({{ $user->id }})" variant="ghost" size="sm" icon="shield-check" square />
+                            <flux:button wire:click="managePlans({{ $user->id }})" variant="ghost" size="sm" icon="credit-card" square />
                             <flux:button wire:click="manageFingerprints({{ $user->id }})" variant="ghost" size="sm" icon="key" square />
-                            <flux:button wire:click="editUser({{ $user->id }})" variant="ghost" size="sm" icon="pencil" square />
+                            <flux:button wire:click="edit({{ $user->id }})" variant="ghost" size="sm" icon="pencil" square />
                             @if ($user->id !== auth()->id())
-                                <flux:button wire:click="deleteUser({{ $user->id }})" variant="ghost" size="sm" icon="trash" color="red" square />
+                                <flux:button wire:click="delete({{ $user->id }})" variant="ghost" size="sm" icon="trash" color="red" square />
                             @endif
                         </div>
                     </flux:table.cell>
@@ -259,81 +183,12 @@ new class extends Component
         </flux:table.rows>
     </flux:table>
 
-    <flux:modal name="user-modal" class="md:w-[40rem]">
-        <div class="space-y-6">
-            <div>
-                <flux:heading size="lg">{{ $editingUserId ? 'Editar Usuário' : 'Novo Usuário' }}</flux:heading>
-                <flux:subheading>Preencha os dados abaixo.</flux:subheading>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <flux:field>
-                    <flux:label>Nome</flux:label>
-                    <flux:input wire:model="name" />
-                    <flux:error name="name" />
-                </flux:field>
-
-                <flux:field>
-                    <flux:label>Email</flux:label>
-                    <flux:input wire:model="email" type="email" />
-                    <flux:error name="email" />
-                </flux:field>
-
-                <flux:field>
-                    <flux:label>Telefone</flux:label>
-                    <flux:input wire:model="phone" />
-                    <flux:error name="phone" />
-                </flux:field>
-
-                <flux:field>
-                    <flux:label>Senha {{ $editingUserId ? '(deixe em branco para não alterar)' : '' }}</flux:label>
-                    <flux:input wire:model="password" type="password" />
-                    <flux:error name="password" />
-                </flux:field>
-            </div>
-
-            <flux:separator />
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <flux:field>
-                    <flux:label>Órgãos Reguladores/Centralizadores</flux:label>
-                    <flux:input wire:model="regulatory_bodies" />
-                    <flux:error name="regulatory_bodies" />
-                </flux:field>
-
-                <flux:field>
-                    <flux:label>Credenciais</flux:label>
-                    <flux:input wire:model="credentials" />
-                    <flux:error name="credentials" />
-                </flux:field>
-            </div>
-
-            <flux:field>
-                <flux:label>Especialidades</flux:label>
-                <flux:input wire:model="specialties" />
-                <flux:error name="specialties" />
-            </flux:field>
-
-            <flux:field>
-                <flux:label>Descrição</flux:label>
-                <flux:textarea wire:model="description" />
-                <flux:error name="description" />
-            </flux:field>
-
-            <flux:field>
-                <flux:switch wire:model="is_admin" label="Administrador" />
-                <flux:error name="is_admin" />
-            </flux:field>
-
-            <div class="flex gap-2">
-                <flux:spacer />
-                <flux:modal.close>
-                    <flux:button variant="ghost">Cancelar</flux:button>
-                </flux:modal.close>
-                <flux:button wire:click="save" variant="primary">Salvar</flux:button>
-            </div>
-        </div>
-    </flux:modal>
+    <x-utils.form-modal
+        :isEditing="!!$editingId"
+        :editModalTitle="$editModalTitle"
+        :createModalTitle="$createModalTitle"
+        class="md:w-[40rem]"
+    />
 
     <flux:modal name="fingerprints-modal" class="md:w-[35rem]">
         <div class="space-y-6">
@@ -389,23 +244,23 @@ new class extends Component
         </div>
     </flux:modal>
 
-    <flux:modal name="permissions-user-modal" class="md:w-[25rem]">
+    <flux:modal name="plans-user-modal" class="md:w-[25rem]">
         <div class="space-y-6">
             <div>
-                <flux:heading size="lg">Gerenciar Permissões</flux:heading>
-                <flux:subheading>Atribuir permissões para: {{ $this->managingPermissionsUser?->name }}</flux:subheading>
+                <flux:heading size="lg">Gerenciar Planos</flux:heading>
+                <flux:subheading>Atribuir planos para: {{ $this->managingPlansUser?->name }}</flux:subheading>
             </div>
 
             <div class="space-y-4">
-                @forelse ($this->allPermissions as $permission)
-                    <div class="flex items-center justify-between" wire:key="perm-user-{{ $permission->id }}">
-                        <flux:label>{{ $permission->name }} <span class="text-xs text-zinc-500">({{ $permission->slug }})</span></flux:label>
+                @forelse ($this->allPlans as $plan)
+                    <div class="flex items-center justify-between" wire:key="plan-user-{{ $plan->id }}">
+                        <flux:label>{{ $plan->name }} <span class="text-xs text-zinc-500">({{ $plan->price }} {{ $plan->currency }})</span></flux:label>
                         <flux:switch 
-                            wire:model="userPermissions.{{ $permission->id }}" 
+                            wire:model="userPlans.{{ $plan->id }}" 
                         />
                     </div>
                 @empty
-                    <flux:text class="text-center py-4">Nenhuma permissão cadastrada.</flux:text>
+                    <flux:text class="text-center py-4">Nenhum plano cadastrado.</flux:text>
                 @endforelse
             </div>
 
@@ -414,7 +269,7 @@ new class extends Component
                 <flux:modal.close>
                     <flux:button variant="ghost">Cancelar</flux:button>
                 </flux:modal.close>
-                <flux:button wire:click="savePermissions" variant="primary">Salvar</flux:button>
+                <flux:button wire:click="savePlans" variant="primary">Salvar</flux:button>
             </div>
         </div>
     </flux:modal>

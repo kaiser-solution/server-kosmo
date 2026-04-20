@@ -17,7 +17,15 @@ new class extends CrudComponent
     public array $columnsToDisplay = [
         'name' => 'Nome',
         'slug' => 'Slug (Chave)',
+        'application_name' => 'Aplicação',
     ];
+
+    public function fields(): array
+    {
+        $fields = parent::fields();
+        $fields['application_id']['options'] = \App\Models\Application::pluck('name', 'id')->toArray();
+        return $fields;
+    }
 
     public function updatedDataName($value)
     {
@@ -49,12 +57,18 @@ new class extends CrudComponent
         <flux:table.rows>
             @foreach ($this->items as $item)
                 <flux:table.row :key="$item->id">
-                    <flux:table.cell variant="strong">{{ $item->name }}</flux:table.cell>
-                    <flux:table.cell>
-                        <flux:badge color="blue" size="sm" inset="top bottom">
-                            {{ $item->slug }}
-                        </flux:badge>
-                    </flux:table.cell>
+                    @foreach ($columnsToDisplay as $key => $column)
+                        <flux:table.cell>
+                            @if($key === 'slug')
+                                <flux:badge color="blue" size="sm" inset="top bottom">
+                                    {{ $item->slug }}
+                                </flux:badge>
+                            @else
+                                {{ $item->$key }}
+                            @endif
+                        </flux:table.cell>
+                    @endforeach
+
                     <flux:table.cell>
                         <div class="flex items-center gap-2">
                             <flux:button wire:click="edit({{ $item->id }})" variant="ghost" size="sm" icon="pencil" square />

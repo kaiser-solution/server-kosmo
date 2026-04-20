@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Application;
 use App\Models\DeviceFingerprint;
 use App\Models\User;
 use Illuminate\Support\Facades\Crypt;
@@ -14,6 +15,9 @@ new #[Layout('layouts.auth')] #[Title('App Login')] class extends Component
     #[Url]
     public string $fingerprint = '';
 
+    #[Url]
+    public string $app = '';
+
     public string $email = '';
     public string $password = '';
 
@@ -26,10 +30,10 @@ new #[Layout('layouts.auth')] #[Title('App Login')] class extends Component
             'email' => 'required|email',
             'password' => 'required',
             'fingerprint' => 'required',
+            'app' => 'nullable|string|exists:applications,namespace',
         ]);
 
         $user = User::where('email', $this->email)->first();
-
         if (! $user || ! Hash::check($this->password, $user->password)) {
             $this->addError('email', __('As credenciais fornecidas estão incorretas.'));
             return;
@@ -41,7 +45,17 @@ new #[Layout('layouts.auth')] #[Title('App Login')] class extends Component
              return;
         }
 
-        $existingFingerprint = DeviceFingerprint::where('fingerprint', $this->fingerprint)->first();
+        // Identificar aplicação
+        $application = null;
+        if ($this->app) {
+            $application = Application::where('namespace', $this->app)->first();
+        }
+
+        $query = DeviceFingerprint::where('fingerprint', $this->fingerprint);
+        if ($application) {
+            $query->where('application_id', $application->id);
+        }
+        $existingFingerprint = $query->first();
 
         if ($existingFingerprint && $existingFingerprint->user_id !== $user->id) {
             $this->addError('email', __('Este dispositivo já está associado a outra conta.'));
@@ -51,11 +65,17 @@ new #[Layout('layouts.auth')] #[Title('App Login')] class extends Component
         if (!$existingFingerprint) {
             DeviceFingerprint::create([
                 'user_id' => $user->id,
+                'application_id' => $application?->id,
                 'fingerprint' => $this->fingerprint,
             ]);
         }
 
         $token = $user->createToken($this->fingerprint)->plainTextToken;
+
+        // Carregar todos os planos e permissões do usuário
+        $plans = $user->plans()->with('permissions')->get();
+
+        $permissionsSlugs = $plans->flatMap(fn($p) => $p->permissions)->pluck('slug')->unique()->values()->toArray();
 
         $payload = Crypt::encryptString(json_encode([
             'token' => $token,
@@ -68,10 +88,9 @@ new #[Layout('layouts.auth')] #[Title('App Login')] class extends Component
                 'credentials' => $user->credentials,
                 'specialties' => $user->specialties,
                 'description' => $user->description,
-                'permissions' => $user->permissions->pluck('slug')->toArray(),
+                'permissions' => $permissionsSlugs,
             ],
         ]));
-        // dd($payload);
 
         $this->redirectUrl = str_replace(['{token}', '{payload}'], [$token, $payload], config('app.device_login_redirect_url'));
         $this->success = true;
@@ -80,9 +99,9 @@ new #[Layout('layouts.auth')] #[Title('App Login')] class extends Component
 ?>
 
 <div class="flex flex-col gap-6">
-    <x-auth-header 
-        :title="__('Login do Aplicativo')" 
-        :description="__('Entre com seu e-mail e senha para ser redirecionado para o app')" 
+    <x-auth-header
+        :title="__('Login do Aplicativo')"
+        :description="__('Entre com seu e-mail e senha para ser redirecionado para o app')"
     />
 
     @if ($success)
