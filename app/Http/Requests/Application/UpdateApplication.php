@@ -2,8 +2,4 @@
 
 namespace App\Http\Requests\Application;
 
-
-class UpdateApplication extends StoreApplication
-{
-   
-}
+class UpdateApplication extends StoreApplication {}

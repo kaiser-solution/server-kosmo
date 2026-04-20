@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Http\Requests\Plan\StorePlan;
 use App\Http\Requests\Plan\UpdatePlan;
 use App\Models\Plan;
-use Illuminate\Http\Request;
 
 class PlanController extends Controller
 {
@@ -23,6 +22,7 @@ class PlanController extends Controller
     public function store(StorePlan $request)
     {
         Plan::create($request->validated());
+
         return redirect()->route('plans.index');
 
     }
@@ -49,6 +49,7 @@ class PlanController extends Controller
     public function update(UpdatePlan $request, Plan $plan)
     {
         $plan->update($request->validated());
+
         return redirect()->route('plans.index');
     }
 

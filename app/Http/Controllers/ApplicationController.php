@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Http\Requests\Application\StoreApplication;
 use App\Http\Requests\Application\UpdateApplication;
 use App\Models\Application;
-use Illuminate\Http\Request;
 
 class ApplicationController extends Controller
 {
@@ -23,6 +22,7 @@ class ApplicationController extends Controller
     public function store(StoreApplication $request)
     {
         Application::create($request->validated());
+
         return redirect()->route('application.index');
     }
 

@@ -26,7 +26,7 @@ class StorePlan extends FormRequest
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'price' => 'required|integer',
-            'currency' => 'required|string',             
+            'currency' => 'required|string',
         ];
     }
 }
