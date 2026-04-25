@@ -14,12 +14,11 @@ return [
     | To learn more: https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
     |
     */
-
     'paths' => ['*'],
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => explode(',', env('CORS_ALLOWED_ORIGINS', '*')),
+    'allowed_origins' => ['https://front.kaisersolution.com.br','*'],
 
     'allowed_origins_patterns' => [],
 
@@ -29,6 +28,5 @@ return [
 
     'max_age' => 0,
 
-    'supports_credentials' => true,
 
 ];

@@ -2,6 +2,8 @@
     Header always set Access-Control-Allow-Origin "*"
     Header always set Access-Control-Allow-Methods "GET, POST, OPTIONS, PUT, DELETE"
     Header always set Access-Control-Allow-Headers "Content-Type, Authorization"
+    Header always set Access-Control-Allow-Origin "https://front.kaisersolution.com.br"
+    Header always set Access-Control-Allow-Credentials "true"
 </IfModule>
 
 <IfModule mod_rewrite.c>
