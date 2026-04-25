@@ -1,23 +1,37 @@
-<IfModule mod_headers.c>
-    Header always set Access-Control-Allow-Origin "https://front.kaisersolution.com.br"
-    Header always set Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS"
-    Header always set Access-Control-Allow-Headers "Content-Type, Authorization, Accept"
-    Header always set Access-Control-Allow-Credentials "true"
-</IfModule>
-
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
-    # NÃO reescreve OPTIONS (deixa passar direto)
-    RewriteCond %{REQUEST_METHOD} OPTIONS
-    RewriteRule ^ - [L]
+    # =========================
+    # 🔥 CORS - PRELIGHT FIX (ESSENCIAL)
+    # =========================
 
-    # Redireciona tudo para /public corretamente
+    # Captura origem
+    RewriteCond %{REQUEST_METHOD} OPTIONS
+    RewriteRule ^(.*)$ - [E=HTTP_ORIGIN:%{HTTP:Origin}]
+
+    <IfModule mod_headers.c>
+        Header always set Access-Control-Allow-Origin "%{HTTP_ORIGIN}e" env=HTTP_ORIGIN
+        Header always set Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+        Header always set Access-Control-Allow-Headers "Content-Type, Authorization, Accept"
+        Header always set Access-Control-Allow-Credentials "true"
+    </IfModule>
+
+    # Responde OPTIONS direto (sem passar pelo Laravel)
+    RewriteCond %{REQUEST_METHOD} OPTIONS
+    RewriteRule ^(.*)$ - [R=200,L]
+
+    # =========================
+    # 🚀 LARAVEL REDIRECT
+    # =========================
+
     RewriteCond %{REQUEST_URI} !^/public/
     RewriteRule ^(.*)$ public/$1 [L]
 </IfModule>
 
-# Bloquear acesso a arquivos sensíveis
+# =========================
+# 🔒 SEGURANÇA
+# =========================
+
 <Files .env>
     Order allow,deny
     Deny from all
