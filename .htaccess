@@ -1,5 +1,4 @@
 <IfModule mod_headers.c>
-    Header always set Access-Control-Allow-Origin "*"
     Header always set Access-Control-Allow-Methods "GET, POST, OPTIONS, PUT, DELETE"
     Header always set Access-Control-Allow-Headers "Content-Type, Authorization"
     Header always set Access-Control-Allow-Origin "https://front.kaisersolution.com.br"
