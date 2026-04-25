@@ -35,3 +35,7 @@ Route::post('/{namespace}/contacts', [ContactController::class, 'store']);
 Route::patch('/{namespace}/contacts/{id}', [ContactController::class, 'update']);
 Route::delete('/{namespace}/contacts/{id}', [ContactController::class, 'destroy']);
 Route::get('/{namespace}', [DynamicApiController::class, 'handle']);
+
+Route::options('{any}', function () {
+    return response()->json([], 200);
+})->where('any', '.*');
