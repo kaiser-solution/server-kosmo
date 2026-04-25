@@ -1,5 +1,15 @@
+<IfModule mod_headers.c>
+    Header always set Access-Control-Allow-Origin "*"
+    Header always set Access-Control-Allow-Methods "GET, POST, OPTIONS, PUT, DELETE"
+    Header always set Access-Control-Allow-Headers "Content-Type, Authorization"
+</IfModule>
+
 <IfModule mod_rewrite.c>
     RewriteEngine On
+
+    # Permitir requisições OPTIONS (preflight)
+    RewriteCond %{REQUEST_METHOD} OPTIONS
+    RewriteRule ^(.*)$ $1 [R=200,L]
 
     # Redireciona tudo para a pasta /public
     RewriteRule ^(.*)$ public/$1 [L]
