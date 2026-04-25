@@ -17,8 +17,4 @@ Route::middleware(['auth', 'verified', 'admin'])->group(function () {
 });
 
 
-Route::options('{any}', function () {
-    return response()->json([], 200);
-})->where('any', '.*');
-
 require __DIR__.'/settings.php';
