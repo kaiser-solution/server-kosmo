@@ -1,7 +1,11 @@
 <?php
 
+use App\Http\Controllers\Api\AppConfigController;
+use App\Http\Controllers\Api\ContactController;
 use App\Http\Controllers\Api\DeviceLoginController;
 use App\Http\Controllers\Api\DynamicApiController;
+use App\Http\Controllers\Api\ProfileController;
+use App\Http\Controllers\Api\RecordController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -14,5 +18,20 @@ Route::get('/', function (Request $request) {
 });
 
 Route::post('/device-login', [DeviceLoginController::class, 'login']);
+Route::post('/profiles', [ProfileController::class, 'store'])->middleware('auth:sanctum');
+Route::delete('/profiles/{id}', [ProfileController::class, 'destroy'])->middleware('auth:sanctum');
 
+Route::get('/{namespace}/config', [AppConfigController::class, 'show']);
+Route::get('/{namespace}/record-types', [RecordController::class, 'types']);
+Route::get('/{namespace}/records/{typeSlug}', [RecordController::class, 'listByType']);
+Route::post('/{namespace}/records/{typeSlug}', [RecordController::class, 'store']);
+Route::patch('/{namespace}/records/{typeSlug}/{id}', [RecordController::class, 'update']);
+Route::get('/{namespace}/institutions/{typeSlug}', [RecordController::class, 'listInstitutions']);
+Route::post('/{namespace}/institutions/{typeSlug}', [RecordController::class, 'storeInstitution']);
+Route::put('/{namespace}/institutions/{typeSlug}/{name}', [RecordController::class, 'updateInstitution']);
+Route::patch('/{namespace}/institutions/{typeSlug}/{name}', [RecordController::class, 'toggleInstitution']);
+Route::get('/{namespace}/contacts', [ContactController::class, 'listContacts']);
+Route::post('/{namespace}/contacts', [ContactController::class, 'store']);
+Route::patch('/{namespace}/contacts/{id}', [ContactController::class, 'update']);
+Route::delete('/{namespace}/contacts/{id}', [ContactController::class, 'destroy']);
 Route::get('/{namespace}', [DynamicApiController::class, 'handle']);

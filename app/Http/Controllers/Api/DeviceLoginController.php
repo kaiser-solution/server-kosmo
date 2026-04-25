@@ -57,6 +57,17 @@ class DeviceLoginController extends Controller
             ->values()
             ->toArray();
 
+        $profiles = $user->profiles()
+            ->select(['id', 'name', 'avatar'])
+            ->selectRaw('CASE WHEN pin IS NOT NULL AND pin != "" THEN 1 ELSE 0 END as has_pin')
+            ->get()
+            ->map(fn ($p) => [
+                'id' => $p->id,
+                'name' => $p->name,
+                'avatar' => $p->avatar,
+                'pin' => (bool) $p->has_pin,
+            ]);
+
         return response()->json([
             'token' => $token,
             'user' => [
@@ -70,6 +81,7 @@ class DeviceLoginController extends Controller
                 'description' => $user->description,
                 'is_admin' => $user->is_admin,
                 'permissions' => $permissions,
+                'profiles' => $profiles,
                 'profile' => $profile ? [
                     'id' => $profile->id,
                     'name' => $profile->name,

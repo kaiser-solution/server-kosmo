@@ -292,4 +292,59 @@ class DeviceLoginTest extends TestCase
         $response->assertStatus(200)
             ->assertJsonFragment(['permissions' => ['test-permission']]);
     }
+
+    public function test_login_response_contains_profiles_list(): void
+    {
+        $user = User::factory()->create(['is_admin' => false]);
+        $user->profiles()->createMany([
+            ['name' => 'Perfil A', 'avatar' => null, 'pin' => null],
+            ['name' => 'Perfil B', 'avatar' => null, 'pin' => bcrypt('1234')],
+        ]);
+
+        $response = $this->postJson('/api/device-login', [
+            'email' => $user->email,
+            'password' => 'password',
+            'fingerprint' => 'test-fingerprint',
+        ]);
+
+        $response->assertOk()
+            ->assertJsonCount(2, 'user.profiles')
+            ->assertJsonPath('user.profiles.0.name', 'Perfil A')
+            ->assertJsonPath('user.profiles.0.pin', false)
+            ->assertJsonPath('user.profiles.1.name', 'Perfil B')
+            ->assertJsonPath('user.profiles.1.pin', true);
+    }
+
+    public function test_login_with_profile_selection(): void
+    {
+        $user = User::factory()->create(['is_admin' => false]);
+        $profile = $user->profiles()->create(['name' => 'Perfil X', 'avatar' => null, 'pin' => null]);
+
+        $response = $this->postJson('/api/device-login', [
+            'email' => $user->email,
+            'password' => 'password',
+            'fingerprint' => 'test-fingerprint',
+            'profile_id' => $profile->id,
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('user.profile.id', $profile->id)
+            ->assertJsonPath('user.profile.name', 'Perfil X');
+    }
+
+    public function test_login_with_profile_wrong_pin_returns_403(): void
+    {
+        $user = User::factory()->create(['is_admin' => false]);
+        $profile = $user->profiles()->create(['name' => 'Perfil PIN', 'avatar' => null, 'pin' => bcrypt('9999')]);
+
+        $response = $this->postJson('/api/device-login', [
+            'email' => $user->email,
+            'password' => 'password',
+            'fingerprint' => 'test-fingerprint',
+            'profile_id' => $profile->id,
+            'pin' => '0000',
+        ]);
+
+        $response->assertStatus(403);
+    }
 }

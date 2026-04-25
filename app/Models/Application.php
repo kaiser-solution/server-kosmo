@@ -44,4 +44,19 @@ class Application extends BaseModel
     {
         return $this->hasMany(Permission::class);
     }
+
+    public function config()
+    {
+        return $this->hasOne(AppConfig::class);
+    }
+
+    public function recordTypes()
+    {
+        return $this->hasMany(RecordType::class);
+    }
+
+    public function records()
+    {
+        return $this->hasMany(Record::class);
+    }
 }

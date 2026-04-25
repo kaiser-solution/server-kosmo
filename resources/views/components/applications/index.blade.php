@@ -1,7 +1,10 @@
 <?php
 
 use App\Livewire\Abstracts\CrudComponent;
+use App\Models\AppConfig;
 use App\Models\Application;
+use App\Models\RecordType;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Computed;
 
@@ -17,6 +20,17 @@ new class extends CrudComponent
     public ?int $managingPermissionsId = null;
     public string $newPermissionName = '';
     public string $newPermissionSlug = '';
+
+    public ?int $configuringAppId = null;
+    public string $configDisplayName = '';
+    public string $configPrimaryColor = '#000000';
+    public string $configSecondaryColor = '#000000';
+    public string $configDefaultCurrency = 'BRL';
+
+    public ?int $managingRecordTypesId = null;
+    public string $newRecordTypeName = '';
+    public string $newRecordTypeSlug = '';
+    public string $newRecordTypeDescription = '';
 
     public array $columnsToDisplay = [
         'name' => 'Nome',
@@ -49,6 +63,95 @@ new class extends CrudComponent
     public function deletePermission($id)
     {
         \App\Models\Permission::find($id)?->delete();
+    }
+
+    public function manageConfig($id)
+    {
+        $this->configuringAppId = $id;
+        $config = AppConfig::where('application_id', $id)->first();
+
+        $this->configDisplayName = $config?->display_name ?? '';
+        $this->configPrimaryColor = $config?->primary_color ?? '#000000';
+        $this->configSecondaryColor = $config?->secondary_color ?? '#000000';
+        $this->configDefaultCurrency = $config?->default_currency ?? 'BRL';
+
+        $this->modal('config-modal')->show();
+    }
+
+    public function saveConfig()
+    {
+        $this->validate([
+            'configDisplayName' => 'nullable|string|max:255',
+            'configPrimaryColor' => 'nullable|string|max:7',
+            'configSecondaryColor' => 'nullable|string|max:7',
+            'configDefaultCurrency' => 'nullable|string|max:3',
+        ]);
+
+        AppConfig::updateOrCreate(
+            ['application_id' => $this->configuringAppId],
+            [
+                'display_name' => $this->configDisplayName ?: null,
+                'primary_color' => $this->configPrimaryColor,
+                'secondary_color' => $this->configSecondaryColor,
+                'default_currency' => $this->configDefaultCurrency,
+            ]
+        );
+
+        $application = Application::find($this->configuringAppId);
+        if ($application) {
+            Cache::forget("app_config_by_namespace_{$application->namespace}");
+        }
+
+        $this->modal('config-modal')->close();
+    }
+
+    public function manageRecordTypes($id)
+    {
+        $this->managingRecordTypesId = $id;
+        $this->reset(['newRecordTypeName', 'newRecordTypeSlug', 'newRecordTypeDescription']);
+        $this->modal('record-types-modal')->show();
+    }
+
+    public function addRecordType()
+    {
+        $this->validate([
+            'newRecordTypeName' => 'required|string|max:255',
+            'newRecordTypeSlug' => 'required|string|max:100',
+            'newRecordTypeDescription' => 'nullable|string',
+        ]);
+
+        RecordType::create([
+            'application_id' => $this->managingRecordTypesId,
+            'name' => $this->newRecordTypeName,
+            'slug' => $this->newRecordTypeSlug,
+            'description' => $this->newRecordTypeDescription ?: null,
+            'active' => true,
+        ]);
+
+        $this->reset(['newRecordTypeName', 'newRecordTypeSlug', 'newRecordTypeDescription']);
+    }
+
+    public function toggleRecordType($id)
+    {
+        $type = RecordType::find($id);
+        if ($type) {
+            $type->update(['active' => ! $type->active]);
+        }
+    }
+
+    public function deleteRecordType($id)
+    {
+        RecordType::find($id)?->delete();
+    }
+
+    #[Computed]
+    public function currentRecordTypes()
+    {
+        if (! $this->managingRecordTypesId) {
+            return [];
+        }
+
+        return RecordType::where('application_id', $this->managingRecordTypesId)->get();
     }
 
     #[Computed]
@@ -113,6 +216,8 @@ new class extends CrudComponent
                     <flux:table.cell>
                         <div class="flex items-center gap-2">
                             <flux:button wire:click="managePermissions({{ $item->id }})" variant="ghost" size="sm" icon="shield-check" square />
+                            <flux:button wire:click="manageRecordTypes({{ $item->id }})" variant="ghost" size="sm" icon="rectangle-stack" square />
+                            <flux:button wire:click="manageConfig({{ $item->id }})" variant="ghost" size="sm" icon="cog-6-tooth" square />
                             <flux:button wire:click="edit({{ $item->id }})" variant="ghost" size="sm" icon="pencil" square />
                             <flux:button wire:click="delete({{ $item->id }})" variant="ghost" size="sm" icon="trash" color="red" square />
                         </div>
@@ -131,6 +236,135 @@ new class extends CrudComponent
         :cancelButtonText="$this->cancelButtonText"
         :okButtonText="$this->okButtonText"
     />
+
+    <flux:modal name="config-modal" class="md:w-[500px]">
+        <div class="space-y-6">
+            <div>
+                <flux:heading size="lg">Configurações da Aplicação</flux:heading>
+                <flux:subheading>Personalize a aparência e comportamento do frontend.</flux:subheading>
+            </div>
+
+            @if($configuringAppId)
+                <div class="space-y-4">
+                    <flux:field>
+                        <flux:label>Nome de Exibição</flux:label>
+                        <flux:input wire:model="configDisplayName" placeholder="Ex: Meu App de Finanças" />
+                        <flux:error name="configDisplayName" />
+                    </flux:field>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <flux:field>
+                            <flux:label>Cor Primária</flux:label>
+                            <div class="flex items-center gap-2">
+                                <input type="color" wire:model="configPrimaryColor" class="h-9 w-12 cursor-pointer rounded border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800" />
+                                <flux:input wire:model="configPrimaryColor" placeholder="#000000" class="font-mono" />
+                            </div>
+                            <flux:error name="configPrimaryColor" />
+                        </flux:field>
+
+                        <flux:field>
+                            <flux:label>Cor Secundária</flux:label>
+                            <div class="flex items-center gap-2">
+                                <input type="color" wire:model="configSecondaryColor" class="h-9 w-12 cursor-pointer rounded border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800" />
+                                <flux:input wire:model="configSecondaryColor" placeholder="#000000" class="font-mono" />
+                            </div>
+                            <flux:error name="configSecondaryColor" />
+                        </flux:field>
+                    </div>
+
+                    <flux:field>
+                        <flux:label>Moeda Padrão</flux:label>
+                        <flux:select wire:model="configDefaultCurrency">
+                            <flux:select.option value="BRL">BRL — Real Brasileiro</flux:select.option>
+                            <flux:select.option value="USD">USD — Dólar Americano</flux:select.option>
+                            <flux:select.option value="EUR">EUR — Euro</flux:select.option>
+                            <flux:select.option value="GBP">GBP — Libra Esterlina</flux:select.option>
+                        </flux:select>
+                        <flux:error name="configDefaultCurrency" />
+                    </flux:field>
+                </div>
+            @endif
+
+            <div class="flex justify-end gap-2">
+                <flux:modal.close>
+                    <flux:button variant="ghost">Cancelar</flux:button>
+                </flux:modal.close>
+                <flux:button wire:click="saveConfig" variant="primary">Salvar Configurações</flux:button>
+            </div>
+        </div>
+    </flux:modal>
+
+    <flux:modal name="record-types-modal" class="md:w-[700px]">
+        <div class="space-y-6">
+            <div>
+                <flux:heading size="lg">Tipos de Registro</flux:heading>
+                <flux:subheading>Defina quais tipos de registro esta aplicação pode receber.</flux:subheading>
+            </div>
+
+            @if($managingRecordTypesId)
+                <div class="space-y-4">
+                    <div class="flex gap-2 items-start">
+                        <flux:field>
+                            <flux:input wire:model="newRecordTypeName" placeholder="Nome (ex: Despesa)" size="sm" />
+                            <flux:error name="newRecordTypeName" />
+                        </flux:field>
+                        <flux:field>
+                            <flux:input wire:model="newRecordTypeSlug" placeholder="Slug (ex: expense)" size="sm" />
+                            <flux:error name="newRecordTypeSlug" />
+                        </flux:field>
+                        <flux:field class="flex-1">
+                            <flux:input wire:model="newRecordTypeDescription" placeholder="Descrição (opcional)" size="sm" />
+                        </flux:field>
+                        <flux:button wire:click="addRecordType" variant="primary" size="sm" icon="plus">Adicionar</flux:button>
+                    </div>
+
+                    <flux:separator />
+
+                    <flux:table>
+                        <flux:table.columns>
+                            <flux:table.column>Nome</flux:table.column>
+                            <flux:table.column>Slug</flux:table.column>
+                            <flux:table.column>Descrição</flux:table.column>
+                            <flux:table.column>Status</flux:table.column>
+                            <flux:table.column align="end">Ações</flux:table.column>
+                        </flux:table.columns>
+                        <flux:table.rows>
+                            @forelse($this->currentRecordTypes as $recordType)
+                                <flux:table.row :key="$recordType->id">
+                                    <flux:table.cell>{{ $recordType->name }}</flux:table.cell>
+                                    <flux:table.cell><code>{{ $recordType->slug }}</code></flux:table.cell>
+                                    <flux:table.cell>{{ $recordType->description ?? '—' }}</flux:table.cell>
+                                    <flux:table.cell>
+                                        <flux:badge :color="$recordType->active ? 'green' : 'zinc'" size="sm" inset="top bottom">
+                                            {{ $recordType->active ? 'Ativo' : 'Inativo' }}
+                                        </flux:badge>
+                                    </flux:table.cell>
+                                    <flux:table.cell align="end">
+                                        <div class="flex items-center gap-1 justify-end">
+                                            <flux:button wire:click="toggleRecordType({{ $recordType->id }})" variant="ghost" size="sm" :icon="$recordType->active ? 'eye-slash' : 'eye'" square />
+                                            <flux:button wire:click="deleteRecordType({{ $recordType->id }})" variant="ghost" size="sm" icon="trash" color="red" square />
+                                        </div>
+                                    </flux:table.cell>
+                                </flux:table.row>
+                            @empty
+                                <flux:table.row>
+                                    <flux:table.cell colspan="5" class="text-center text-zinc-500 py-4 italic">
+                                        Nenhum tipo de registro cadastrado.
+                                    </flux:table.cell>
+                                </flux:table.row>
+                            @endforelse
+                        </flux:table.rows>
+                    </flux:table>
+                </div>
+            @endif
+
+            <div class="flex justify-end">
+                <flux:modal.close>
+                    <flux:button variant="ghost">Fechar</flux:button>
+                </flux:modal.close>
+            </div>
+        </div>
+    </flux:modal>
 
     <x-utils.permissions-modal
         title="Permissões da Aplicação"
