@@ -26,6 +26,9 @@ new class extends CrudComponent
     public string $configPrimaryColor = '#000000';
     public string $configSecondaryColor = '#000000';
     public string $configDefaultCurrency = 'BRL';
+    public array $configCategories = [];
+    public string $newCategoryName = '';
+    public string $newCategoryColor = '#6366f1';
 
     public ?int $managingRecordTypesId = null;
     public string $newRecordTypeName = '';
@@ -75,6 +78,10 @@ new class extends CrudComponent
         $this->configSecondaryColor = $config?->secondary_color ?? '#000000';
         $this->configDefaultCurrency = $config?->default_currency ?? 'BRL';
 
+        $this->configCategories = $config?->categories ?? [];
+        $this->newCategoryName = '';
+        $this->newCategoryColor = '#6366f1';
+
         $this->modal('config-modal')->show();
     }
 
@@ -85,6 +92,9 @@ new class extends CrudComponent
             'configPrimaryColor' => 'nullable|string|max:7',
             'configSecondaryColor' => 'nullable|string|max:7',
             'configDefaultCurrency' => 'nullable|string|max:3',
+            'configCategories' => 'nullable|array',
+            'configCategories.*.name' => 'required|string|max:50',
+            'configCategories.*.color' => 'required|string|regex:/^#[0-9a-fA-F]{6}$/',
         ]);
 
         AppConfig::updateOrCreate(
@@ -94,6 +104,7 @@ new class extends CrudComponent
                 'primary_color' => $this->configPrimaryColor,
                 'secondary_color' => $this->configSecondaryColor,
                 'default_currency' => $this->configDefaultCurrency,
+                'categories' => $this->configCategories,
             ]
         );
 
@@ -103,6 +114,48 @@ new class extends CrudComponent
         }
 
         $this->modal('config-modal')->close();
+    }
+
+    public function addCategory(): void
+    {
+        $this->validate([
+            'newCategoryName' => 'required|string|max:50',
+            'newCategoryColor' => 'required|string|regex:/^#[0-9a-fA-F]{6}$/',
+        ]);
+
+        $name = trim($this->newCategoryName);
+
+        $exists = collect($this->configCategories)->contains(fn ($c) => strtolower($c['name']) === strtolower($name));
+        if ($exists) {
+            $this->addError('newCategoryName', 'Esta categoria já existe.');
+            return;
+        }
+
+        $categories = $this->configCategories;
+        $categories[] = ['name' => $name, 'color' => $this->newCategoryColor];
+
+        usort($categories, function ($a, $b) {
+            if ($a['name'] === 'Outros') {
+                return 1;
+            }
+            if ($b['name'] === 'Outros') {
+                return -1;
+            }
+
+            return strcmp($a['name'], $b['name']);
+        });
+
+        $this->configCategories = $categories;
+
+        $this->newCategoryName = '';
+        $this->newCategoryColor = '#6366f1';
+    }
+
+    public function removeCategory(int $index): void
+    {
+        $categories = $this->configCategories;
+        array_splice($categories, $index, 1);
+        $this->configCategories = $categories;
     }
 
     public function manageRecordTypes($id)
@@ -282,6 +335,35 @@ new class extends CrudComponent
                         </flux:select>
                         <flux:error name="configDefaultCurrency" />
                     </flux:field>
+                </div>
+
+                <flux:separator />
+
+                <div>
+                    <flux:heading size="sm" class="mb-3">🎨 Categorias e Cores</flux:heading>
+
+                    <div class="space-y-2 mb-3 max-h-48 overflow-y-auto">
+                        @forelse($configCategories as $i => $cat)
+                            <div class="flex items-center gap-2" wire:key="category-{{ $i }}-{{ $cat['name'] }}">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium text-white flex-1" style="background:{{ $cat['color'] }}">
+                                    {{ $cat['name'] }}
+                                </span>
+                                <input type="color" wire:model.live="configCategories.{{ $i }}.color" class="h-7 w-9 cursor-pointer rounded border border-zinc-300 dark:border-zinc-600" />
+                                <flux:button wire:click="removeCategory({{ $i }})" variant="ghost" size="sm" icon="trash" color="red" square />
+                            </div>
+                        @empty
+                            <p class="text-sm text-zinc-500">Nenhuma categoria cadastrada.</p>
+                        @endforelse
+                    </div>
+
+                    <div class="flex gap-2 items-start">
+                        <flux:field class="flex-1">
+                            <flux:input wire:model.live="newCategoryName" wire:keydown.enter="addCategory" placeholder="Nome da categoria" size="sm" />
+                            <flux:error name="newCategoryName" />
+                        </flux:field>
+                        <input type="color" wire:model="newCategoryColor" class="h-9 w-10 cursor-pointer rounded border border-zinc-300 dark:border-zinc-600 mt-0" />
+                        <flux:button wire:click="addCategory" variant="ghost" size="sm" icon="plus">Adicionar</flux:button>
+                    </div>
                 </div>
             @endif
 

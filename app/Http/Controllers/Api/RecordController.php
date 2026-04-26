@@ -160,11 +160,14 @@ class RecordController extends Controller
             return response()->json(['message' => 'Record type not found'], 404);
         }
 
-        $institutions = $recordType->schema['x-institutions'] ?? [];
+        $institutions = collect($recordType->schema['x-institutions'] ?? [])
+            ->filter(fn ($inst) => ($inst['active'] ?? true) !== false)
+            ->values()
+            ->all();
 
         return response()->json([
             'status' => 'success',
-            'data' => array_values($institutions),
+            'data' => $institutions,
         ]);
     }
 
@@ -194,8 +197,32 @@ class RecordController extends Controller
         $schema = $recordType->schema ?? [];
         $institutions = $schema['x-institutions'] ?? [];
 
-        $exists = collect($institutions)->firstWhere('name', $validated['name']);
-        if ($exists) {
+        $existingIndex = -1;
+        foreach ($institutions as $index => $inst) {
+            if ($inst['name'] === $validated['name']) {
+                $existingIndex = $index;
+                break;
+            }
+        }
+
+        if ($existingIndex !== -1) {
+            if (($institutions[$existingIndex]['active'] ?? true) === false) {
+                // Reativa a instituição existente
+                $institutions[$existingIndex]['active'] = true;
+                $institutions[$existingIndex]['category'] = $validated['category'] ?? null;
+                $institutions[$existingIndex]['defaultVal'] = isset($validated['defaultVal']) ? (float) $validated['defaultVal'] : null;
+                $institutions[$existingIndex]['dueDay'] = isset($validated['dueDay']) ? (int) $validated['dueDay'] : null;
+
+                $schema['x-institutions'] = $institutions;
+                $recordType->schema = $schema;
+                $recordType->save();
+
+                return response()->json([
+                    'status' => 'success',
+                    'data' => $institutions[$existingIndex],
+                ], 200);
+            }
+
             return response()->json(['message' => 'Institution already exists'], 422);
         }
 
@@ -205,6 +232,7 @@ class RecordController extends Controller
             'defaultVal' => isset($validated['defaultVal']) ? (float) $validated['defaultVal'] : null,
             'dueDay' => isset($validated['dueDay']) ? (int) $validated['dueDay'] : null,
             'active' => true,
+            'createdAt' => now()->format('Y-m'),
         ];
 
         $institutions[] = $institution;
@@ -237,20 +265,42 @@ class RecordController extends Controller
         $schema = $recordType->schema ?? [];
         $institutions = $schema['x-institutions'] ?? [];
 
-        $found = false;
-        $updated = null;
-        foreach ($institutions as &$inst) {
+        $foundIndex = -1;
+        foreach ($institutions as $index => $inst) {
             if ($inst['name'] === $name) {
-                $inst['active'] = ! ($inst['active'] ?? true);
-                $updated = $inst;
-                $found = true;
+                $foundIndex = $index;
                 break;
             }
         }
-        unset($inst);
 
-        if (! $found) {
+        if ($foundIndex === -1) {
             return response()->json(['message' => 'Institution not found'], 404);
+        }
+
+        $inst = &$institutions[$foundIndex];
+        $wasActive = $inst['active'] ?? true;
+        $updated = null;
+
+        if ($wasActive) {
+            // Desativar / Anular
+            $hasRecords = Record::where('application_id', $application->id)
+                ->where(function ($q) use ($name) {
+                    $q->where('payload->inst', $name)
+                        ->orWhere('payload->name', $name);
+                })
+                ->exists();
+
+            if ($hasRecords) {
+                $inst['active'] = false;
+                $updated = $inst;
+            } else {
+                array_splice($institutions, $foundIndex, 1);
+                $updated = ['name' => $name, 'deleted' => true];
+            }
+        } else {
+            // Reativar
+            $inst['active'] = true;
+            $updated = $inst;
         }
 
         $schema['x-institutions'] = $institutions;

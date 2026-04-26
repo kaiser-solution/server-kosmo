@@ -109,6 +109,14 @@ class User extends BaseAuthenticableModel
         return $this->belongsToMany(Plan::class, 'plan_user');
     }
 
+    public function applications(): BelongsToMany
+    {
+        return $this->belongsToMany(Application::class, 'plans', 'id', 'application_id', 'id', 'id')
+            ->join('plan_user', 'plans.id', '=', 'plan_user.plan_id')
+            ->where('plan_user.user_id', $this->id)
+            ->distinct();
+    }
+
     /**
      * Get the profiles associated with the user.
      *

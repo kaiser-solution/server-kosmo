@@ -22,6 +22,25 @@ class SineedyTattooSeeder extends Seeder
             ]
         );
 
+        $defaultCategories = [
+            ['name' => 'Assinaturas',    'color' => '#6366f1'],
+            ['name' => 'Cartões',        'color' => '#ec4899'],
+            ['name' => 'Casa',           'color' => '#f59e0b'],
+            ['name' => 'Comunicação',    'color' => '#06b6d4'],
+            ['name' => 'Descartáveis',   'color' => '#84cc16'],
+            ['name' => 'Estúdio',        'color' => '#8b5cf6'],
+            ['name' => 'Gráfica',        'color' => '#f97316'],
+            ['name' => 'Manutenção',     'color' => '#64748b'],
+            ['name' => 'Material Tattoo', 'color' => '#0ea5e9'],
+            ['name' => 'MEI / Impostos', 'color' => '#ef4444'],
+            ['name' => 'Saúde',          'color' => '#10b981'],
+            ['name' => 'Segurança',      'color' => '#d97706'],
+            ['name' => 'Serviços',       'color' => '#a78bfa'],
+            ['name' => 'Terreno',        'color' => '#78716c'],
+            ['name' => 'Transporte',     'color' => '#3b82f6'],
+            ['name' => 'Outros',         'color' => '#718096'],
+        ];
+
         AppConfig::updateOrCreate(
             ['application_id' => $application->id],
             [
@@ -29,6 +48,7 @@ class SineedyTattooSeeder extends Seeder
                 'primary_color' => '#3182ce',
                 'secondary_color' => '#2d3748',
                 'default_currency' => 'BRL',
+                'categories' => json_encode($defaultCategories),
             ]
         );
 

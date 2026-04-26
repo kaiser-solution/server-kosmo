@@ -32,13 +32,18 @@ class AppConfigTest extends TestCase
             ->assertJsonPath('config.default_currency', 'BRL');
     }
 
-    public function test_returns_404_when_application_has_no_config(): void
+    public function test_returns_default_config_when_application_has_no_explicit_config(): void
     {
-        Application::factory()->create(['namespace' => 'no-config-app']);
+        Application::factory()->create([
+            'name' => 'Default App',
+            'namespace' => 'no-config-app',
+        ]);
 
         $response = $this->getJson('/api/no-config-app/config');
 
-        $response->assertNotFound();
+        $response->assertOk()
+            ->assertJsonPath('config.name', 'Default App')
+            ->assertJsonPath('config.display_name', 'Default App');
     }
 
     public function test_returns_404_for_unknown_namespace(): void

@@ -16,5 +16,4 @@ Route::middleware(['auth', 'verified', 'admin'])->group(function () {
     Route::resource('applications', ApplicationController::class)->names('applications');
 });
 
-
 require __DIR__.'/settings.php';

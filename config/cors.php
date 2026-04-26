@@ -18,7 +18,7 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['https://front.kaisersolution.com.br'],
+    'allowed_origins' => ['https://front.kaisersolution.com.br',],
 
     'allowed_origins_patterns' => [],
 
@@ -27,6 +27,5 @@ return [
     'exposed_headers' => [],
 
     'max_age' => 0,
-
 
 ];

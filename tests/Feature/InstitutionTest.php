@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Application;
+use App\Models\Record;
 use App\Models\RecordType;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -35,7 +36,8 @@ class InstitutionTest extends TestCase
 
         $response->assertOk()
             ->assertJsonPath('status', 'success')
-            ->assertJsonCount(2, 'data');
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.name', 'Aluguel');
     }
 
     public function test_list_institutions_returns_404_for_unknown_namespace(): void
@@ -68,7 +70,8 @@ class InstitutionTest extends TestCase
         $response->assertCreated()
             ->assertJsonPath('status', 'success')
             ->assertJsonPath('data.name', 'Energia')
-            ->assertJsonPath('data.active', true);
+            ->assertJsonPath('data.active', true)
+            ->assertJsonPath('data.createdAt', now()->format('Y-m'));
     }
 
     public function test_create_institution_requires_name(): void
@@ -94,20 +97,60 @@ class InstitutionTest extends TestCase
         $response->assertUnprocessable();
     }
 
-    public function test_can_toggle_institution_status(): void
+    public function test_create_institution_reactivates_inactive_one(): void
     {
         $this->makeAppWithRecordType([
+            ['name' => 'Antiga', 'active' => false, 'category' => 'Velha'],
+        ]);
+
+        $response = $this->postJson('/api/test-app/institutions/recurring-bill', [
+            'name' => 'Antiga',
+            'category' => 'Nova',
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('data.active', true)
+            ->assertJsonPath('data.category', 'Nova');
+    }
+
+    public function test_can_toggle_institution_status_and_remove_if_no_records(): void
+    {
+        [$application, $recordType] = $this->makeAppWithRecordType([
             ['name' => 'Internet', 'active' => true],
         ]);
 
+        // Toggle desativa e remove pois não há registros
         $response = $this->patchJson('/api/test-app/institutions/recurring-bill/Internet');
+
+        $response->assertOk()
+            ->assertJsonPath('data.deleted', true);
+
+        $this->getJson('/api/test-app/institutions/recurring-bill')
+            ->assertJsonCount(0, 'data');
+    }
+
+    public function test_toggle_institution_keeps_inactive_if_has_records(): void
+    {
+        [$application, $recordType] = $this->makeAppWithRecordType([
+            ['name' => 'Aluguel', 'active' => true],
+        ]);
+
+        // Cria um registro associado
+        Record::create([
+            'application_id' => $application->id,
+            'record_type_id' => $recordType->id,
+            'payload' => ['name' => 'Aluguel', 'amount' => 1000],
+            'occurred_at' => now(),
+        ]);
+
+        $response = $this->patchJson('/api/test-app/institutions/recurring-bill/Aluguel');
 
         $response->assertOk()
             ->assertJsonPath('data.active', false);
 
-        $response2 = $this->patchJson('/api/test-app/institutions/recurring-bill/Internet');
-        $response2->assertOk()
-            ->assertJsonPath('data.active', true);
+        // Não aparece na listagem
+        $this->getJson('/api/test-app/institutions/recurring-bill')
+            ->assertJsonCount(0, 'data');
     }
 
     public function test_toggle_institution_returns_404_for_unknown_name(): void

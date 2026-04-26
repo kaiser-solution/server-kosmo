@@ -31,6 +31,15 @@ class AppConfig extends BaseModel
             'type' => 'text',
             'rules' => 'nullable|string|max:3',
         ],
+        'categories' => [
+            'label' => 'Categorias',
+            'type' => 'json',
+            'rules' => 'nullable|json',
+        ],
+    ];
+
+    protected $casts = [
+        'categories' => 'array',
     ];
 
     public function application()
