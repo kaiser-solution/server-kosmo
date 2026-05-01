@@ -78,7 +78,8 @@ new class extends CrudComponent
         $this->configSecondaryColor = $config?->secondary_color ?? '#000000';
         $this->configDefaultCurrency = $config?->default_currency ?? 'BRL';
 
-        $this->configCategories = $config?->categories ?? [];
+        $categories = $config?->categories ?? [];
+        $this->configCategories = is_array($categories) ? $categories : (json_decode($categories, true) ?? []);
         $this->newCategoryName = '';
         $this->newCategoryColor = '#6366f1';
 
