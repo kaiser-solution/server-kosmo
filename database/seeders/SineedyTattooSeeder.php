@@ -5,8 +5,12 @@ namespace Database\Seeders;
 use App\Models\AppConfig;
 use App\Models\Application;
 use App\Models\Contact;
+use App\Models\Plan;
 use App\Models\Record;
 use App\Models\RecordType;
+use App\Models\User;
+use App\Models\UserProfile;
+use Hash;
 use Illuminate\Database\Seeder;
 
 class SineedyTattooSeeder extends Seeder
@@ -32,6 +36,7 @@ class SineedyTattooSeeder extends Seeder
             ['name' => 'MEI / Impostos', 'color' => '#ef4444'],
             ['name' => 'Saúde',          'color' => '#10b981'],
             ['name' => 'Segurança',      'color' => '#d97706'],
+            ['name' => 'Retiradas',      'color' => '#06d977'],
             ['name' => 'Terreno',        'color' => '#78716c'],
             ['name' => 'Transporte',     'color' => '#3b82f6'],
             ['name' => 'Outros',         'color' => '#718096'],
@@ -101,29 +106,28 @@ class SineedyTattooSeeder extends Seeder
                         'reference_month' => ['type' => 'string',  'description' => 'Mês de referência (YYYY-MM)'],
                     ],
                     'x-institutions' => [
-                        ['name' => 'Aluguel Casa',             'defaultVal' => 1800.00, 'dueDay' => 15,  'category' => 'Casa'],
-                        ['name' => 'Energia Elétrica Casa',    'defaultVal' => 350.00,  'dueDay' => 23,  'category' => 'Casa'],
-                        ['name' => 'Água e Esgoto Casa',       'defaultVal' => 250.00,  'dueDay' => 13,  'category' => 'Casa'],
-                        ['name' => 'Internet Fibra Casa',      'defaultVal' => 125.00,  'dueDay' => 10,  'category' => 'Casa'],
-                        ['name' => 'Aluguel Estudio',          'defaultVal' => 1700.00, 'dueDay' => 5,   'category' => 'Estúdio'],
-                        ['name' => 'Água e Luz Estudio',       'defaultVal' => 550.00,  'dueDay' => 5,   'category' => 'Estúdio'],
-                        ['name' => 'Internet Fibra Estudio',   'defaultVal' => 125.00,  'dueDay' => 30,  'category' => 'Estúdio'],
-                        ['name' => 'Plano de Celular',         'defaultVal' => 65.00,   'dueDay' => 20,  'category' => 'Comunicação'],
-                        ['name' => 'Alarme Casa e Estudio',    'defaultVal' => 200.00,  'dueDay' => 15,  'category' => 'Segurança'],
-                        ['name' => 'Parcela Terreno',          'defaultVal' => 2940.00, 'dueDay' => 28,  'category' => 'Terreno'],
-                        ['name' => 'Parcela Carro',            'defaultVal' => 1000.00, 'dueDay' => 10,  'category' => 'Transporte'],
-                        ['name' => 'Convênio Médico',          'defaultVal' => 76.00,   'dueDay' => 20,  'category' => 'Saúde'],
-                        ['name' => 'Serviços de Software',     'defaultVal' => 100.00,  'dueDay' => 20,  'category' => 'Assinaturas'],
-                        ['name' => 'Seguro de Vida',           'defaultVal' => 105.00,  'dueDay' => 20,  'category' => 'Saúde'],
-                        ['name' => 'Cartão Denis',             'defaultVal' => 1500.00, 'dueDay' => 10,  'category' => 'Cartões'],
-                        ['name' => 'Cartão Roldão',            'defaultVal' => 1000.00, 'dueDay' => 20,  'category' => 'Cartões'],
-                        ['name' => 'Telefone Dani',            'defaultVal' => 44.00,   'dueDay' => 10,  'category' => 'Comunicação'],
-                        ['name' => 'Telefone Denis',           'defaultVal' => 44.00,   'dueDay' => 10,  'category' => 'Comunicação'],
-                        ['name' => 'Telefone Erika',           'defaultVal' => 39.00,   'dueDay' => 26,  'category' => 'Comunicação'],
-                        ['name' => 'Assinatura Netflix',       'defaultVal' => 60.00,   'dueDay' => 10,  'category' => 'Assinaturas'],
-                        ['name' => 'MEI Negociação Atrasados', 'defaultVal' => 110.00,  'dueDay' => 30,  'category' => 'MEI / Impostos'],
-                        ['name' => 'MEI',                      'defaultVal' => 86.00,   'dueDay' => 20,  'category' => 'MEI / Impostos'],
-                        ['name' => 'Clube de Assinaturas',     'defaultVal' => 200.00,  'dueDay' => 10,  'category' => 'Assinaturas'],
+                        ['name' => 'Aluguel Casa',             'defaultVal' => 1800.00, 'dueDay' => 15,  'category' => 'Casa',            'trackingSince' => '2026-04'],
+                        ['name' => 'Energia Elétrica Casa',    'defaultVal' => 350.00,  'dueDay' => 23,  'category' => 'Casa',            'trackingSince' => '2026-04'],
+                        ['name' => 'Água e Esgoto Casa',       'defaultVal' => 250.00,  'dueDay' => 13,  'category' => 'Casa',            'trackingSince' => '2026-04'],
+                        ['name' => 'Internet Fibra Casa',      'defaultVal' => 125.00,  'dueDay' => 10,  'category' => 'Casa',            'trackingSince' => '2026-04'],
+                        ['name' => 'Aluguel Estudio',          'defaultVal' => 1700.00, 'dueDay' => 5,   'category' => 'Estúdio',         'trackingSince' => '2026-04'],
+                        ['name' => 'Água e Luz Estudio',       'defaultVal' => 550.00,  'dueDay' => 5,   'category' => 'Estúdio',         'trackingSince' => '2026-04'],
+                        ['name' => 'Internet Fibra Estudio',   'defaultVal' => 125.00,  'dueDay' => 30,  'category' => 'Estúdio',         'trackingSince' => '2026-04'],
+                        ['name' => 'Plano de Celular',         'defaultVal' => 65.00,   'dueDay' => 20,  'category' => 'Comunicação',     'trackingSince' => '2026-04'],
+                        ['name' => 'Alarme Casa e Estudio',    'defaultVal' => 200.00,  'dueDay' => 15,  'category' => 'Segurança',       'trackingSince' => '2026-04'],
+                        ['name' => 'Parcela Terreno',          'defaultVal' => 2940.00, 'dueDay' => 28,  'category' => 'Terreno',         'trackingSince' => '2026-04'],
+                        ['name' => 'Parcela Carro',            'defaultVal' => 1000.00, 'dueDay' => 10,  'category' => 'Transporte',      'trackingSince' => '2026-04'],
+                        ['name' => 'Convênio Médico',          'defaultVal' => 76.00,   'dueDay' => 20,  'category' => 'Saúde',           'trackingSince' => '2026-04'],
+                        ['name' => 'Serviços de Software',     'defaultVal' => 100.00,  'dueDay' => 20,  'category' => 'Assinaturas',     'trackingSince' => '2026-04'],
+                        ['name' => 'Seguro de Vida',           'defaultVal' => 105.00,  'dueDay' => 20,  'category' => 'Saúde',           'trackingSince' => '2026-04'],
+                        ['name' => 'Cartão Denis',             'defaultVal' => 1500.00, 'dueDay' => 10,  'category' => 'Cartões',         'trackingSince' => '2026-04'],
+                        ['name' => 'Cartão Roldão',            'defaultVal' => 1000.00, 'dueDay' => 20,  'category' => 'Cartões',         'trackingSince' => '2026-04'],
+                        ['name' => 'Telefone Dani',            'defaultVal' => 44.00,   'dueDay' => 10,  'category' => 'Comunicação',     'trackingSince' => '2026-04'],
+                        ['name' => 'Telefone Denis',           'defaultVal' => 44.00,   'dueDay' => 10,  'category' => 'Comunicação',     'trackingSince' => '2026-04'],
+                        ['name' => 'Telefone Erika',           'defaultVal' => 39.00,   'dueDay' => 26,  'category' => 'Comunicação',     'trackingSince' => '2026-04'],
+                        ['name' => 'Assinatura Netflix',       'defaultVal' => 60.00,   'dueDay' => 10,  'category' => 'Assinaturas',     'trackingSince' => '2026-04'],
+                        ['name' => 'MEI Negociação Atrasados', 'defaultVal' => 110.00,  'dueDay' => 30,  'category' => 'MEI / Impostos',  'trackingSince' => '2026-04'],
+                        ['name' => 'MEI',                      'defaultVal' => 86.00,   'dueDay' => 20,  'category' => 'MEI / Impostos',  'trackingSince' => '2026-04'],
                     ],
                 ],
             ],
@@ -171,6 +175,7 @@ class SineedyTattooSeeder extends Seeder
                             'defaultVal' => $bill['defaultVal'] ?? null,
                             'dueDay' => $dueDay,
                             'category' => $bill['category'] ?? null,
+                            'trackingSince' => $bill['trackingSince'] ?? null,
                             'paid' => false,
                             'reference_month' => $currentMonth,
                         ],
@@ -212,5 +217,29 @@ class SineedyTattooSeeder extends Seeder
         $this->command->info('✅ Sineedy Tattoo seed concluída com sucesso!');
         $this->command->info("   Application: {$application->name} (namespace: {$application->namespace})");
         $this->command->info('   RecordTypes: transaction, recurring-bill');
+
+        $user = User::factory()->create([
+            'name' => 'Sidney',
+            'email' => 'rip_sined@hotmail.com',
+            'password' => Hash::make('123456789'),
+        ]);
+
+        $plan = Plan::updateOrCreate(
+            ['name' => 'premium', 'application_id' => $application->id],
+            [
+                'description' => 'Plano Premium do Sineedy Tattoo',
+                'price' => 0,
+                'currency' => 'BRL',
+            ]
+        );
+
+        $user->plans()->syncWithoutDetaching([$plan->id]);
+
+        UserProfile::create([
+            'user_id' => $user->id,
+            'name' => 'Denis',
+            'avatar' => null,
+            'pin' => null,
+        ]);
     }
 }
