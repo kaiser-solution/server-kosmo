@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\DeviceLoginController;
 use App\Http\Controllers\Api\DynamicApiController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\RecordController;
+use App\Http\Controllers\Api\RegisterController;
 use App\Models\Application;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -30,6 +31,7 @@ Route::get('/', function (Request $request) {
     return response()->json(['status' => 'ok']);
 });
 
+Route::post('/register', [RegisterController::class, 'store']);
 Route::post('/device-login', [DeviceLoginController::class, 'login']);
 Route::post('/profiles', [ProfileController::class, 'store'])->middleware('auth:sanctum');
 Route::delete('/profiles/{id}', [ProfileController::class, 'destroy'])->middleware('auth:sanctum');
