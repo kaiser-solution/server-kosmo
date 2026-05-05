@@ -131,6 +131,36 @@ class SineedyTattooSeeder extends Seeder
                     ],
                 ],
             ],
+            [
+                'name' => 'Cliente',
+                'slug' => 'client',
+                'description' => 'Cadastro de clientes do estúdio.',
+                'schema' => [
+                    'type' => 'object',
+                    'required' => ['name'],
+                    'properties' => [
+                        'name' => ['type' => 'string', 'description' => 'Nome do cliente'],
+                        'email' => ['type' => 'string', 'description' => 'E-mail do cliente'],
+                        'phone' => ['type' => 'string', 'description' => 'Telefone do cliente'],
+                    ],
+                ],
+            ],
+            [
+                'name' => 'Campanha',
+                'slug' => 'campaign',
+                'description' => 'Cadastro de campanhas de marketing.',
+                'schema' => [
+                    'type' => 'object',
+                    'required' => ['name'],
+                    'properties' => [
+                        'name' => ['type' => 'string', 'description' => 'Nome da campanha'],
+                        'start_date' => ['type' => 'string', 'format' => 'date', 'description' => 'Data de início'],
+                        'end_date' => ['type' => 'string', 'format' => 'date', 'description' => 'Data de término'],
+                        'budget' => ['type' => 'number', 'description' => 'Orçamento da campanha'],
+                        'notes' => ['type' => 'string', 'description' => 'Observações'],
+                    ],
+                ],
+            ],
         ];
 
         foreach ($recordTypes as $typeData) {

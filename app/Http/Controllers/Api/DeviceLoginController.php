@@ -174,19 +174,14 @@ class DeviceLoginController extends Controller
      */
     private function syncFingerprint(User $user, string $fingerprint, ?Application $application): void
     {
-        $query = DeviceFingerprint::where('fingerprint', $fingerprint);
+        $query = DeviceFingerprint::where('fingerprint', $fingerprint)
+            ->where('user_id', $user->id);
 
         if ($application) {
             $query->where('application_id', $application->id);
         }
 
         $existing = $query->first();
-
-        if ($existing && $existing->user_id !== $user->id) {
-            abort(response()->json([
-                'message' => __('This device is already associated with another account.'),
-            ], 403));
-        }
 
         if (! $existing) {
             DeviceFingerprint::create([

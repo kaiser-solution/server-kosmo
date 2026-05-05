@@ -74,6 +74,21 @@ class InstitutionTest extends TestCase
             ->assertJsonPath('data.createdAt', now()->format('Y-m'));
     }
 
+    public function test_can_create_institution_with_validity(): void
+    {
+        $this->makeAppWithRecordType();
+
+        $response = $this->postJson('/api/test-app/institutions/recurring-bill', [
+            'name' => 'Assinatura',
+            'startDate' => '2026-05-01',
+            'endDate' => '2026-12-31',
+        ]);
+
+        $response->assertCreated()
+            ->assertJsonPath('data.startDate', '2026-05-01')
+            ->assertJsonPath('data.endDate', '2026-12-31');
+    }
+
     public function test_create_institution_requires_name(): void
     {
         $this->makeAppWithRecordType();
@@ -173,6 +188,8 @@ class InstitutionTest extends TestCase
             'category' => 'Cat2',
             'defaultVal' => 20,
             'dueDay' => 15,
+            'startDate' => '2026-05-01',
+            'endDate' => '2026-12-31',
         ]);
 
         $response->assertOk()
@@ -180,7 +197,9 @@ class InstitutionTest extends TestCase
             ->assertJsonPath('data.name', 'Nova')
             ->assertJsonPath('data.category', 'Cat2')
             ->assertJsonPath('data.defaultVal', 20)
-            ->assertJsonPath('data.dueDay', 15);
+            ->assertJsonPath('data.dueDay', 15)
+            ->assertJsonPath('data.startDate', '2026-05-01')
+            ->assertJsonPath('data.endDate', '2026-12-31');
 
         $this->getJson('/api/test-app/institutions/recurring-bill')
             ->assertJsonCount(1, 'data')

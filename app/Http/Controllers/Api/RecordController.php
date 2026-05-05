@@ -126,6 +126,7 @@ class RecordController extends Controller
         $validated = $request->validate([
             'payload' => 'sometimes|array',
             'occurred_at' => 'sometimes|nullable|date',
+            'record_type_id' => 'sometimes|exists:record_types,id',
         ]);
 
         if (isset($validated['payload'])) {
@@ -136,12 +137,37 @@ class RecordController extends Controller
             $record->occurred_at = $validated['occurred_at'];
         }
 
+        if (isset($validated['record_type_id'])) {
+            $record->record_type_id = $validated['record_type_id'];
+        }
+
         $record->save();
 
         return response()->json([
             'status' => 'success',
             'data' => $record,
         ]);
+    }
+
+    public function destroy(string $namespace, string $typeSlug, int $id)
+    {
+        $application = Application::where('namespace', $namespace)->first();
+
+        if (! $application) {
+            return response()->json(['message' => 'Application not found'], 404);
+        }
+
+        $record = Record::where('application_id', $application->id)
+            ->where('id', $id)
+            ->first();
+
+        if (! $record) {
+            return response()->json(['message' => 'Record not found'], 404);
+        }
+
+        $record->delete();
+
+        return response()->json(['status' => 'success'], 200);
     }
 
     public function listInstitutions(string $namespace, string $typeSlug)
@@ -192,6 +218,8 @@ class RecordController extends Controller
             'category' => 'nullable|string|max:255',
             'defaultVal' => 'nullable|numeric',
             'dueDay' => 'nullable|integer|min:1|max:31',
+            'startDate' => 'nullable|date',
+            'endDate' => 'nullable|date',
         ]);
 
         $schema = $recordType->schema ?? [];
@@ -212,6 +240,8 @@ class RecordController extends Controller
                 $institutions[$existingIndex]['category'] = $validated['category'] ?? null;
                 $institutions[$existingIndex]['defaultVal'] = isset($validated['defaultVal']) ? (float) $validated['defaultVal'] : null;
                 $institutions[$existingIndex]['dueDay'] = isset($validated['dueDay']) ? (int) $validated['dueDay'] : null;
+                $institutions[$existingIndex]['startDate'] = $validated['startDate'] ?? null;
+                $institutions[$existingIndex]['endDate'] = $validated['endDate'] ?? null;
 
                 $schema['x-institutions'] = $institutions;
                 $recordType->schema = $schema;
@@ -231,6 +261,8 @@ class RecordController extends Controller
             'category' => $validated['category'] ?? null,
             'defaultVal' => isset($validated['defaultVal']) ? (float) $validated['defaultVal'] : null,
             'dueDay' => isset($validated['dueDay']) ? (int) $validated['dueDay'] : null,
+            'startDate' => $validated['startDate'] ?? null,
+            'endDate' => $validated['endDate'] ?? null,
             'active' => true,
             'createdAt' => now()->format('Y-m'),
         ];
@@ -334,6 +366,8 @@ class RecordController extends Controller
             'category' => 'nullable|string|max:255',
             'defaultVal' => 'nullable|numeric',
             'dueDay' => 'nullable|integer|min:1|max:31',
+            'startDate' => 'nullable|date',
+            'endDate' => 'nullable|date',
         ]);
 
         $schema = $recordType->schema ?? [];
@@ -356,6 +390,8 @@ class RecordController extends Controller
                 $inst['category'] = $validated['category'] ?? null;
                 $inst['defaultVal'] = isset($validated['defaultVal']) ? (float) $validated['defaultVal'] : null;
                 $inst['dueDay'] = isset($validated['dueDay']) ? (int) $validated['dueDay'] : null;
+                $inst['startDate'] = $validated['startDate'] ?? null;
+                $inst['endDate'] = $validated['endDate'] ?? null;
                 $updated = $inst;
                 $found = true;
                 break;
@@ -397,12 +433,22 @@ class RecordController extends Controller
         $validated = $request->validate([
             'payload' => 'required|array',
             'occurred_at' => 'nullable|date',
+            'startDate' => 'nullable|date',
+            'endDate' => 'nullable|date',
         ]);
+
+        $payload = $validated['payload'];
+        if (isset($validated['startDate'])) {
+            $payload['startDate'] = $validated['startDate'];
+        }
+        if (isset($validated['endDate'])) {
+            $payload['endDate'] = $validated['endDate'];
+        }
 
         $record = Record::create([
             'application_id' => $application->id,
             'record_type_id' => $recordType->id,
-            'payload' => $validated['payload'],
+            'payload' => $payload,
             'occurred_at' => $validated['occurred_at'] ?? now(),
         ]);
 

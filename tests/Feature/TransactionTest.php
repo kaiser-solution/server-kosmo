@@ -53,6 +53,22 @@ class TransactionTest extends TestCase
         $response->assertNotFound();
     }
 
+    public function test_can_store_a_record_with_validity(): void
+    {
+        $application = Application::factory()->create(['namespace' => 'finance-app']);
+        RecordType::factory()->create(['application_id' => $application->id, 'slug' => 'expense', 'active' => true]);
+
+        $response = $this->postJson('/api/finance-app/records/expense', [
+            'payload' => ['amount' => 150.50, 'description' => 'Assinatura'],
+            'startDate' => '2026-05-01',
+            'endDate' => '2026-12-31',
+        ]);
+
+        $response->assertCreated()
+            ->assertJsonPath('data.payload.startDate', '2026-05-01')
+            ->assertJsonPath('data.payload.endDate', '2026-12-31');
+    }
+
     public function test_can_store_a_record(): void
     {
         $application = Application::factory()->create(['namespace' => 'finance-app']);
@@ -109,6 +125,26 @@ class TransactionTest extends TestCase
         $response->assertOk()
             ->assertJsonPath('status', 'success')
             ->assertJsonPath('data.payload.isVoided', true);
+    }
+
+    public function test_can_update_record_type(): void
+    {
+        $application = Application::factory()->create(['namespace' => 'finance-app']);
+        $recordType1 = RecordType::factory()->create(['application_id' => $application->id, 'slug' => 'type1', 'active' => true]);
+        $recordType2 = RecordType::factory()->create(['application_id' => $application->id, 'slug' => 'type2', 'active' => true]);
+
+        $record = Record::factory()->create([
+            'application_id' => $application->id,
+            'record_type_id' => $recordType1->id,
+        ]);
+
+        $response = $this->patchJson("/api/finance-app/records/type1/{$record->id}", [
+            'record_type_id' => $recordType2->id,
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('status', 'success')
+            ->assertJsonPath('data.record_type_id', $recordType2->id);
     }
 
     public function test_update_returns_404_for_unknown_record(): void
