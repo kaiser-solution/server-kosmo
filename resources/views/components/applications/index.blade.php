@@ -3,36 +3,55 @@
 use App\Livewire\Abstracts\CrudComponent;
 use App\Models\AppConfig;
 use App\Models\Application;
+use App\Models\Permission;
 use App\Models\RecordType;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Str;
 use Livewire\Attributes\Computed;
 
 new class extends CrudComponent
 {
     public string $modelClass = Application::class;
+
     public string $pageTitle = 'Gerenciamento de Aplicações';
+
     public string $newButtonTitle = 'Nova Aplicação';
+
     public string $searchPlaceholder = 'Buscar aplicações...';
+
     public string $editModalTitle = 'Editar Aplicação';
+
     public string $createModalTitle = 'Nova Aplicação';
+
     public string $deleteModalTitle = 'Excluir Aplicação';
+
     public ?int $managingPermissionsId = null;
+
     public string $newPermissionName = '';
+
     public string $newPermissionSlug = '';
 
     public ?int $configuringAppId = null;
+
     public string $configDisplayName = '';
+
     public string $configPrimaryColor = '#000000';
+
     public string $configSecondaryColor = '#000000';
+
     public string $configDefaultCurrency = 'BRL';
+
     public array $configCategories = [];
+
     public string $newCategoryName = '';
+
     public string $newCategoryColor = '#6366f1';
 
     public ?int $managingRecordTypesId = null;
+
     public string $newRecordTypeName = '';
+
     public string $newRecordTypeSlug = '';
+
     public string $newRecordTypeDescription = '';
 
     public array $columnsToDisplay = [
@@ -54,7 +73,7 @@ new class extends CrudComponent
             'newPermissionSlug' => 'required|string|max:255|unique:permissions,slug',
         ]);
 
-        \App\Models\Permission::create([
+        Permission::create([
             'name' => $this->newPermissionName,
             'slug' => $this->newPermissionSlug,
             'application_id' => $this->managingPermissionsId,
@@ -65,7 +84,7 @@ new class extends CrudComponent
 
     public function deletePermission($id)
     {
-        \App\Models\Permission::find($id)?->delete();
+        Permission::find($id)?->delete();
     }
 
     public function manageConfig($id)
@@ -117,6 +136,25 @@ new class extends CrudComponent
         $this->modal('config-modal')->close();
     }
 
+    public function restoreDefaultCategories()
+    {
+        $this->configCategories = [
+            ['name' => 'Assinaturas',    'color' => '#6366f1'],
+            ['name' => 'Cartões',        'color' => '#ec4899'],
+            ['name' => 'Casa',           'color' => '#f59e0b'],
+            ['name' => 'Comunicação',    'color' => '#06b6d4'],
+            ['name' => 'Manutenção',     'color' => '#64748b'],
+            ['name' => 'Material Tattoo', 'color' => '#0ea5e9'],
+            ['name' => 'MEI / Impostos', 'color' => '#ef4444'],
+            ['name' => 'Saúde',          'color' => '#10b981'],
+            ['name' => 'Segurança',      'color' => '#d97706'],
+            ['name' => 'Retiradas',      'color' => '#06d977'],
+            ['name' => 'Terreno',        'color' => '#78716c'],
+            ['name' => 'Transporte',     'color' => '#3b82f6'],
+            ['name' => 'Outros',         'color' => '#718096'],
+        ];
+    }
+
     public function addCategory(): void
     {
         $this->validate([
@@ -129,6 +167,7 @@ new class extends CrudComponent
         $exists = collect($this->configCategories)->contains(fn ($c) => strtolower($c['name']) === strtolower($name));
         if ($exists) {
             $this->addError('newCategoryName', 'Esta categoria já existe.');
+
             return;
         }
 
@@ -211,14 +250,17 @@ new class extends CrudComponent
     #[Computed]
     public function currentApplicationPermissions()
     {
-        if (!$this->managingPermissionsId) return [];
-        return \App\Models\Permission::where('application_id', $this->managingPermissionsId)->get();
+        if (! $this->managingPermissionsId) {
+            return [];
+        }
+
+        return Permission::where('application_id', $this->managingPermissionsId)->get();
     }
 
     #[Computed]
     public function availablePermissions()
     {
-        return \App\Models\Permission::all();
+        return Permission::all();
     }
 
     #[Computed]
@@ -226,9 +268,8 @@ new class extends CrudComponent
     {
         return $this->modelClass::query()
             ->withCount('permissions')
-            ->when($this->q, fn ($q) =>
-                $q->where('name', 'like', "%{$this->q}%")
-                  ->orWhere('endpoint', 'like', "%{$this->q}%")
+            ->when($this->q, fn ($q) => $q->where('name', 'like', "%{$this->q}%")
+                ->orWhere('endpoint', 'like', "%{$this->q}%")
             )
             ->paginate(10);
     }
@@ -341,7 +382,10 @@ new class extends CrudComponent
                 <flux:separator />
 
                 <div>
-                    <flux:heading size="sm" class="mb-3">🎨 Categorias e Cores</flux:heading>
+                    <div class="flex justify-between items-center mb-3">
+                        <flux:heading size="sm">🎨 Categorias e Cores</flux:heading>
+                        <flux:button wire:click="restoreDefaultCategories" variant="ghost" size="sm" icon="arrow-path">Restaurar Padrões</flux:button>
+                    </div>
 
                     <div class="space-y-2 mb-3 max-h-48 overflow-y-auto">
                         @forelse($configCategories as $i => $cat)
@@ -366,14 +410,14 @@ new class extends CrudComponent
                         <flux:button wire:click="addCategory" variant="ghost" size="sm" icon="plus">Adicionar</flux:button>
                     </div>
                 </div>
-            @endif
 
-            <div class="flex justify-end gap-2">
-                <flux:modal.close>
-                    <flux:button variant="ghost">Cancelar</flux:button>
-                </flux:modal.close>
-                <flux:button wire:click="saveConfig" variant="primary">Salvar Configurações</flux:button>
-            </div>
+                <div class="flex justify-end gap-2">
+                    <flux:modal.close>
+                        <flux:button variant="ghost">Cancelar</flux:button>
+                    </flux:modal.close>
+                    <flux:button wire:click="saveConfig" variant="primary">Salvar Configurações</flux:button>
+                </div>
+            @endif
         </div>
     </flux:modal>
 

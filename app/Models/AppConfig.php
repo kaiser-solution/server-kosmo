@@ -11,6 +11,11 @@ class AppConfig extends BaseModel
     use HasFactory, HasTimestamps;
 
     protected static array $fields = [
+        'application_id' => [
+            'label' => 'Aplicação',
+            'type' => 'hidden',
+            'rules' => 'required|exists:applications,id',
+        ],
         'display_name' => [
             'label' => 'Nome de Exibição',
             'type' => 'text',
