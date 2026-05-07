@@ -2,7 +2,6 @@
 
 namespace Database\Factories;
 
-use App\Models\Application;
 use App\Models\RecordType;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -19,12 +18,10 @@ class RecordTypeFactory extends Factory
     public function definition(): array
     {
         return [
-            'application_id' => Application::factory(),
             'name' => $this->faker->words(2, true),
             'slug' => $this->faker->unique()->slug(2),
             'description' => $this->faker->sentence(),
-            'schema' => null,
-            'active' => true,
+            'status' => 'active',
         ];
     }
 }

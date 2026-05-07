@@ -43,10 +43,6 @@ Route::get('/{namespace}/records/{typeSlug}', [RecordController::class, 'listByT
 Route::post('/{namespace}/records/{typeSlug}', [RecordController::class, 'store']);
 Route::patch('/{namespace}/records/{typeSlug}/{id}', [RecordController::class, 'update']);
 Route::delete('/{namespace}/records/{typeSlug}/{id}', [RecordController::class, 'destroy']);
-Route::get('/{namespace}/institutions/{typeSlug}', [RecordController::class, 'listInstitutions']);
-Route::post('/{namespace}/institutions/{typeSlug}', [RecordController::class, 'storeInstitution']);
-Route::put('/{namespace}/institutions/{typeSlug}/{name}', [RecordController::class, 'updateInstitution']);
-Route::patch('/{namespace}/institutions/{typeSlug}/{name}', [RecordController::class, 'toggleInstitution']);
 Route::get('/{namespace}/contacts', [ContactController::class, 'listContacts']);
 Route::post('/{namespace}/contacts', [ContactController::class, 'store']);
 Route::patch('/{namespace}/contacts/{id}', [ContactController::class, 'update']);

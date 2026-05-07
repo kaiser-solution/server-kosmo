@@ -15,7 +15,8 @@ class TransactionTest extends TestCase
     public function test_can_list_record_types_for_valid_namespace(): void
     {
         $application = Application::factory()->create(['namespace' => 'finance-app']);
-        RecordType::factory()->count(2)->create(['application_id' => $application->id, 'active' => true]);
+        $types = RecordType::factory()->count(2)->create(['status' => 'active']);
+        $application->recordTypes()->attach($types);
 
         $response = $this->getJson('/api/finance-app/record-types');
 
@@ -34,7 +35,8 @@ class TransactionTest extends TestCase
     public function test_can_list_records_by_type(): void
     {
         $application = Application::factory()->create(['namespace' => 'finance-app']);
-        $recordType = RecordType::factory()->create(['application_id' => $application->id, 'slug' => 'expense', 'active' => true]);
+        $recordType = RecordType::factory()->create(['slug' => 'expense', 'status' => 'active']);
+        $application->recordTypes()->attach($recordType);
         Record::factory()->count(3)->create(['application_id' => $application->id, 'record_type_id' => $recordType->id]);
 
         $response = $this->getJson('/api/finance-app/records/expense');
@@ -56,7 +58,8 @@ class TransactionTest extends TestCase
     public function test_can_store_a_record_with_validity(): void
     {
         $application = Application::factory()->create(['namespace' => 'finance-app']);
-        RecordType::factory()->create(['application_id' => $application->id, 'slug' => 'expense', 'active' => true]);
+        $type = RecordType::factory()->create(['slug' => 'expense', 'status' => 'active']);
+        $application->recordTypes()->attach($type);
 
         $response = $this->postJson('/api/finance-app/records/expense', [
             'payload' => ['amount' => 150.50, 'description' => 'Assinatura'],
@@ -72,7 +75,8 @@ class TransactionTest extends TestCase
     public function test_can_store_a_record(): void
     {
         $application = Application::factory()->create(['namespace' => 'finance-app']);
-        RecordType::factory()->create(['application_id' => $application->id, 'slug' => 'expense', 'active' => true]);
+        $type = RecordType::factory()->create(['slug' => 'expense', 'status' => 'active']);
+        $application->recordTypes()->attach($type);
 
         $response = $this->postJson('/api/finance-app/records/expense', [
             'payload' => ['amount' => 150.50, 'description' => 'Almoço', 'category' => 'alimentação'],
@@ -100,7 +104,8 @@ class TransactionTest extends TestCase
     public function test_store_validates_required_payload(): void
     {
         $application = Application::factory()->create(['namespace' => 'finance-app']);
-        RecordType::factory()->create(['application_id' => $application->id, 'slug' => 'expense', 'active' => true]);
+        $type = RecordType::factory()->create(['slug' => 'expense', 'status' => 'active']);
+        $application->recordTypes()->attach($type);
 
         $response = $this->postJson('/api/finance-app/records/expense', []);
 
@@ -111,7 +116,8 @@ class TransactionTest extends TestCase
     public function test_can_update_a_record(): void
     {
         $application = Application::factory()->create(['namespace' => 'finance-app']);
-        $recordType = RecordType::factory()->create(['application_id' => $application->id, 'slug' => 'expense', 'active' => true]);
+        $recordType = RecordType::factory()->create(['slug' => 'expense', 'status' => 'active']);
+        $application->recordTypes()->attach($recordType);
         $record = Record::factory()->create([
             'application_id' => $application->id,
             'record_type_id' => $recordType->id,
@@ -130,8 +136,9 @@ class TransactionTest extends TestCase
     public function test_can_update_record_type(): void
     {
         $application = Application::factory()->create(['namespace' => 'finance-app']);
-        $recordType1 = RecordType::factory()->create(['application_id' => $application->id, 'slug' => 'type1', 'active' => true]);
-        $recordType2 = RecordType::factory()->create(['application_id' => $application->id, 'slug' => 'type2', 'active' => true]);
+        $recordType1 = RecordType::factory()->create(['slug' => 'type1', 'status' => 'active']);
+        $recordType2 = RecordType::factory()->create(['slug' => 'type2', 'status' => 'active']);
+        $application->recordTypes()->attach([$recordType1->id, $recordType2->id]);
 
         $record = Record::factory()->create([
             'application_id' => $application->id,
@@ -150,7 +157,8 @@ class TransactionTest extends TestCase
     public function test_update_returns_404_for_unknown_record(): void
     {
         $application = Application::factory()->create(['namespace' => 'finance-app']);
-        RecordType::factory()->create(['application_id' => $application->id, 'slug' => 'expense', 'active' => true]);
+        $type = RecordType::factory()->create(['slug' => 'expense', 'status' => 'active']);
+        $application->recordTypes()->attach($type);
 
         $response = $this->patchJson('/api/finance-app/records/expense/99999', [
             'payload' => ['isVoided' => true],
@@ -172,9 +180,10 @@ class TransactionTest extends TestCase
     {
         $application = Application::factory()->create(['namespace' => 'test-app']);
         $recordType = RecordType::factory()->create([
-            'application_id' => $application->id,
             'slug' => 'transaction',
+            'status' => 'active',
         ]);
+        $application->recordTypes()->attach($recordType);
 
         // Record em Abril
         Record::factory()->create([
@@ -206,5 +215,23 @@ class TransactionTest extends TestCase
             ->assertJsonCount(2, 'data.data')
             ->assertJsonPath('totals.income', 100)
             ->assertJsonPath('totals.expense', 40);
+    }
+
+    public function test_can_delete_a_record(): void
+    {
+        $application = Application::factory()->create(['namespace' => 'finance-app']);
+        $recordType = RecordType::factory()->create(['slug' => 'expense', 'status' => 'active']);
+        $application->recordTypes()->attach($recordType);
+        $record = Record::factory()->create([
+            'application_id' => $application->id,
+            'record_type_id' => $recordType->id,
+        ]);
+
+        $response = $this->deleteJson("/api/finance-app/records/expense/{$record->id}");
+
+        $response->assertOk()
+            ->assertJsonPath('status', 'success');
+
+        $this->assertDatabaseMissing('records', ['id' => $record->id]);
     }
 }
