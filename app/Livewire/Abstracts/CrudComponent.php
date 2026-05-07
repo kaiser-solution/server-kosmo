@@ -50,6 +50,12 @@ abstract class CrudComponent extends Component
 
     public function mount()
     {
+        $this->initializeData();
+    }
+
+    public function initializeData()
+    {
+        $this->data = [];
         foreach ($this->fields() as $field => $config) {
             $type = $config['type'] ?? '';
             if ($type === 'checkbox-group') {
@@ -81,7 +87,8 @@ abstract class CrudComponent extends Component
 
     public function create()
     {
-        $this->reset(['data', 'editingId']);
+        $this->editingId = null;
+        $this->initializeData();
         $this->crudModal()->show();
     }
 

@@ -13,11 +13,6 @@ class RecordType extends BaseModel
     use HasFactory, HasTimestamps;
 
     protected static array $fields = [
-        'application_id' => [
-            'label' => 'Aplicação',
-            'type' => 'select',
-            'rules' => 'required|exists:applications,id',
-        ],
         'name' => [
             'label' => 'Nome',
             'type' => 'text',
@@ -33,30 +28,33 @@ class RecordType extends BaseModel
             'type' => 'text',
             'rules' => 'nullable|string',
         ],
-        'schema' => [
-            'label' => 'Schema (JSON)',
-            'type' => 'json',
-            'rules' => 'nullable|array',
-        ],
-        'active' => [
-            'label' => 'Ativo',
-            'type' => 'checkbox',
-            'rules' => 'boolean',
+        'status' => [
+            'label' => 'Status',
+            'type' => 'select',
+            'options' => [
+                'active' => 'Ativo',
+                'inactive' => 'Inativo',
+            ],
+            'rules' => 'required|string|in:active,inactive',
         ],
     ];
 
     protected $casts = [
-        'schema' => 'array',
-        'active' => 'boolean',
+        'status' => 'string',
     ];
 
-    public function application()
+    public function applications()
     {
-        return $this->belongsTo(Application::class);
+        return $this->belongsToMany(Application::class, 'application_record_type');
     }
 
     public function records()
     {
         return $this->hasMany(Record::class);
+    }
+
+    public function recordPatterns()
+    {
+        return $this->belongsToMany(RecordPattern::class, 'record_pattern_record_type');
     }
 }

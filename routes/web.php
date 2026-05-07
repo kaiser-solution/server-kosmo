@@ -13,6 +13,9 @@ Route::middleware(['auth', 'verified', 'admin'])->group(function () {
     Route::view('permissions', 'pages.permissions.index')->name('permissions.index');
     Route::view('plans', 'pages.plans.index')->name('plans.index');
     Route::view('user-profiles', 'pages.user-profiles.index')->name('user-profiles.index');
+    Route::livewire('record-type-defaults', 'admin.record-type-defaults')->name('record-type-defaults.index');
+    Route::livewire('record-types', 'admin.record-type-manager')->name('record-types.index');
+    Route::livewire('record-patterns', 'admin.record-pattern-manager')->name('record-patterns.index');
     Route::resource('applications', ApplicationController::class)->names('applications');
 });
 

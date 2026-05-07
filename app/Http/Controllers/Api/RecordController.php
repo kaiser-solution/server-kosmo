@@ -18,9 +18,9 @@ class RecordController extends Controller
             return response()->json(['message' => 'Application not found'], 404);
         }
 
-        $types = RecordType::where('application_id', $application->id)
-            ->where('active', true)
-            ->get(['id', 'name', 'slug', 'description', 'schema']);
+        $types = $application->recordTypes()
+            ->where('status', 'active')
+            ->get(['record_types.id', 'record_types.name', 'record_types.slug', 'record_types.description']);
 
         return response()->json([
             'status' => 'success',
@@ -36,9 +36,9 @@ class RecordController extends Controller
             return response()->json(['message' => 'Application not found'], 404);
         }
 
-        $recordType = RecordType::where('application_id', $application->id)
+        $recordType = $application->recordTypes()
             ->where('slug', $typeSlug)
-            ->where('active', true)
+            ->where('status', 'active')
             ->first();
 
         if (! $recordType) {
@@ -421,9 +421,9 @@ class RecordController extends Controller
             return response()->json(['message' => 'Application not found'], 404);
         }
 
-        $recordType = RecordType::where('application_id', $application->id)
+        $recordType = $application->recordTypes()
             ->where('slug', $typeSlug)
-            ->where('active', true)
+            ->where('status', 'active')
             ->first();
 
         if (! $recordType) {

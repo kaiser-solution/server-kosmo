@@ -28,6 +28,16 @@
                         {{ __('Aplicações') }}
                     </flux:sidebar.item>
 
+                    <flux:sidebar.item icon="adjustments-horizontal" :href="route('record-type-defaults.index')" :current="request()->routeIs('record-type-defaults.index')" wire:navigate>
+                        {{ __('Padrões de Tipo de Registro') }}
+                    </flux:sidebar.item>
+                    <flux:sidebar.item icon="table-cells" :href="route('record-types.index')" :current="request()->routeIs('record-types.index')" wire:navigate>
+                        {{ __('Tipos de Registro') }}
+                    </flux:sidebar.item>
+                    <flux:sidebar.item icon="table-cells" :href="route('record-patterns.index')" :current="request()->routeIs('record-patterns.index')" wire:navigate>
+                        {{ __('Gerenciador de Padrões') }}
+                    </flux:sidebar.item>
+
                     <flux:sidebar.item icon="credit-card" :href="route('plans.index')" :current="request()->routeIs('plans.index')" wire:navigate>
                         {{ __('Planos') }}
                     </flux:sidebar.item>

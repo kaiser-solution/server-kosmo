@@ -52,7 +52,7 @@ class Application extends BaseModel
 
     public function recordTypes()
     {
-        return $this->hasMany(RecordType::class);
+        return $this->belongsToMany(RecordType::class, 'application_record_type');
     }
 
     public function records()

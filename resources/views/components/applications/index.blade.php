@@ -4,7 +4,10 @@ use App\Livewire\Abstracts\CrudComponent;
 use App\Models\AppConfig;
 use App\Models\Application;
 use App\Models\Permission;
+use App\Models\Record;
+use App\Models\RecordPattern;
 use App\Models\RecordType;
+use Flux\Flux;
 use Illuminate\Support\Facades\Cache;
 use Livewire\Attributes\Computed;
 
@@ -48,6 +51,20 @@ new class extends CrudComponent
 
     public ?int $managingRecordTypesId = null;
 
+    public ?int $managingDefaultsRecordTypeId = null;
+
+    public array $currentRecordTypeDefaults = [];
+
+    public string $newDefaultName = '';
+
+    public ?float $newDefaultValue = null;
+
+    public string $newDefaultType = 'income';
+
+    public string $newDefaultCategory = '';
+
+    public ?int $newDefaultDueDay = null;
+
     public string $newRecordTypeName = '';
 
     public string $newRecordTypeSlug = '';
@@ -70,8 +87,22 @@ new class extends CrudComponent
     {
         $this->validate([
             'newPermissionName' => 'required|string|max:255',
-            'newPermissionSlug' => 'required|string|max:255|unique:permissions,slug',
+            'newPermissionSlug' => 'required|string|max:255',
         ]);
+
+        $existing = Permission::where('application_id', $this->managingPermissionsId)
+            ->where('slug', $this->newPermissionSlug)
+            ->exists();
+
+        if ($existing) {
+            Flux::toast(
+                variant: 'warning',
+                heading: 'Aviso',
+                text: 'Esta permissão já está cadastrada para esta aplicação.',
+            );
+
+            return;
+        }
 
         Permission::create([
             'name' => $this->newPermissionName,
@@ -80,6 +111,12 @@ new class extends CrudComponent
         ]);
 
         $this->reset(['newPermissionName', 'newPermissionSlug']);
+
+        Flux::toast(
+            variant: 'success',
+            heading: 'Sucesso',
+            text: 'Permissão cadastrada com sucesso.',
+        );
     }
 
     public function deletePermission($id)
@@ -205,6 +242,121 @@ new class extends CrudComponent
         $this->modal('record-types-modal')->show();
     }
 
+    public function addPattern($patternId)
+    {
+        $pattern = RecordPattern::with('recordTypes')->find($patternId);
+        if ($pattern) {
+            $application = Application::find($this->managingRecordTypesId);
+
+            $patternTypeIds = $pattern->recordTypes->pluck('id')->toArray();
+            $existingTypeIds = $application->recordTypes->pluck('id')->toArray();
+
+            $newTypeIds = array_diff($patternTypeIds, $existingTypeIds);
+            $duplicateCount = count($patternTypeIds) - count($newTypeIds);
+
+            if (count($newTypeIds) > 0) {
+                $application->recordTypes()->syncWithoutDetaching($newTypeIds);
+            }
+
+            if ($duplicateCount > 0) {
+                Flux::toast(
+                    variant: 'warning',
+                    heading: 'Aviso',
+                    text: "Alguns itens ({$duplicateCount}) já estavam cadastrados.",
+                );
+            }
+
+            if (count($newTypeIds) === count($patternTypeIds)) {
+                Flux::toast(
+                    variant: 'success',
+                    heading: 'Sucesso',
+                    text: 'Todos os tipos de registro foram cadastrados com sucesso.',
+                );
+            } elseif (count($newTypeIds) > 0) {
+                Flux::toast(
+                    variant: 'success',
+                    heading: 'Sucesso',
+                    text: 'Novos tipos de registro foram adicionados.',
+                );
+            }
+        }
+    }
+
+    public function addDefaultRecordTypes()
+    {
+        // This method is now obsolete if we use patterns, 
+        // but let's keep it for compatibility or refactor it.
+        // For now, let's just make it do nothing or remove it.
+    }
+
+    public function manageDefaults($recordTypeId)
+    {
+        $this->managingDefaultsRecordTypeId = $recordTypeId;
+        $recordType = RecordType::find($recordTypeId);
+        $schema = $recordType->schema ?? [];
+        $this->currentRecordTypeDefaults = $schema['x-institutions'] ?? [];
+
+        $this->modal('record-type-defaults-modal')->show();
+    }
+
+    public function addDefault()
+    {
+        $this->validate([
+            'newDefaultName' => 'required|string|max:255',
+            'newDefaultValue' => 'nullable|numeric',
+            'newDefaultType' => 'required|string',
+            'newDefaultCategory' => 'nullable|string',
+        ]);
+
+        $this->currentRecordTypeDefaults[] = [
+            'name' => $this->newDefaultName,
+            'defaultVal' => $this->newDefaultValue,
+            'type' => $this->newDefaultType,
+            'category' => $this->newDefaultCategory,
+        ];
+
+        $this->reset(['newDefaultName', 'newDefaultValue', 'newDefaultType', 'newDefaultCategory']);
+    }
+
+    public function removeDefault(int $index)
+    {
+        $defaults = $this->currentRecordTypeDefaults;
+        array_splice($defaults, $index, 1);
+        $this->currentRecordTypeDefaults = $defaults;
+    }
+
+    public function saveDefaults()
+    {
+        $recordType = RecordType::find($this->managingDefaultsRecordTypeId);
+        $schema = $recordType->schema ?? [];
+        $schema['x-institutions'] = $this->currentRecordTypeDefaults;
+
+        $recordType->update(['schema' => $schema]);
+
+        $this->modal('record-type-defaults-modal')->close();
+    }
+
+    public function generateRecordsFromDefaults()
+    {
+        $recordType = RecordType::find($this->managingDefaultsRecordTypeId);
+        $defaults = $recordType->schema['x-institutions'] ?? [];
+
+        foreach ($defaults as $default) {
+            Record::create([
+                'application_id' => $recordType->application_id,
+                'record_type_id' => $recordType->id,
+                'payload' => [
+                    'inst' => $default['name'],
+                    'val' => $default['defaultVal'] ?? 0,
+                    'type' => $default['type'],
+                    'cat' => $default['category'],
+                ],
+            ]);
+        }
+
+        $this->modal('record-type-defaults-modal')->close();
+    }
+
     public function addRecordType()
     {
         $this->validate([
@@ -213,23 +365,53 @@ new class extends CrudComponent
             'newRecordTypeDescription' => 'nullable|string',
         ]);
 
-        RecordType::create([
-            'application_id' => $this->managingRecordTypesId,
-            'name' => $this->newRecordTypeName,
-            'slug' => $this->newRecordTypeSlug,
-            'description' => $this->newRecordTypeDescription ?: null,
-            'active' => true,
-        ]);
+        $recordType = RecordType::firstOrCreate(
+            ['slug' => $this->newRecordTypeSlug],
+            [
+                'name' => $this->newRecordTypeName,
+                'description' => $this->newRecordTypeDescription ?: null,
+                'status' => 'active',
+            ]
+        );
+
+        $application = Application::find($this->managingRecordTypesId);
+
+        $isAlreadyAttached = $application->recordTypes()->where('record_type_id', $recordType->id)->exists();
+
+        if ($isAlreadyAttached) {
+            Flux::toast(
+                variant: 'warning',
+                heading: 'Aviso',
+                text: 'Este tipo de registro já está associado a esta aplicação.',
+            );
+
+            return;
+        }
+
+        $application->recordTypes()->syncWithoutDetaching([$recordType->id]);
 
         $this->reset(['newRecordTypeName', 'newRecordTypeSlug', 'newRecordTypeDescription']);
+
+        Flux::toast(
+            variant: 'success',
+            heading: 'Sucesso',
+            text: 'Tipo de registro adicionado com sucesso.',
+        );
     }
 
     public function toggleRecordType($id)
     {
         $type = RecordType::find($id);
         if ($type) {
-            $type->update(['active' => ! $type->active]);
+            $newStatus = $type->status === 'active' ? 'inactive' : 'active';
+            $type->update(['status' => $newStatus]);
         }
+    }
+
+    public function detachRecordType($id)
+    {
+        $application = Application::find($this->managingRecordTypesId);
+        $application->recordTypes()->detach($id);
     }
 
     public function deleteRecordType($id)
@@ -244,7 +426,23 @@ new class extends CrudComponent
             return [];
         }
 
-        return RecordType::where('application_id', $this->managingRecordTypesId)->get();
+        return Application::find($this->managingRecordTypesId)->recordTypes;
+    }
+
+    #[Computed]
+    public function hasRecords()
+    {
+        if (! $this->managingRecordTypesId) {
+            return false;
+        }
+
+        return Record::where('application_id', $this->managingRecordTypesId)->exists();
+    }
+
+    #[Computed]
+    public function availablePatterns()
+    {
+        return RecordPattern::all();
     }
 
     #[Computed]
@@ -421,6 +619,48 @@ new class extends CrudComponent
         </div>
     </flux:modal>
 
+    <flux:modal name="record-type-defaults-modal" class="md:w-[600px]">
+        <div class="space-y-6">
+            <div>
+                <flux:heading size="lg">Gerenciar Padrões</flux:heading>
+                <flux:subheading>Gerencie os padrões (x-institutions) para este tipo de registro.</flux:subheading>
+            </div>
+
+            @if($managingDefaultsRecordTypeId)
+                <div class="space-y-4">
+                    <div class="grid grid-cols-2 gap-2">
+                        <flux:input wire:model="newDefaultName" placeholder="Nome" size="sm" />
+                        <flux:input wire:model="newDefaultValue" placeholder="Valor (opcional)" size="sm" />
+                        <flux:input wire:model="newDefaultType" placeholder="Tipo (ex: income)" size="sm" />
+                        <flux:input wire:model="newDefaultCategory" placeholder="Categoria" size="sm" />
+                        <flux:button wire:click="addDefault" variant="primary" size="sm" icon="plus" class="col-span-2">Adicionar Padrão</flux:button>
+                    </div>
+
+                    <flux:separator />
+
+                    <div class="space-y-2">
+                        @forelse($currentRecordTypeDefaults as $index => $default)
+                            <div class="flex items-center justify-between p-2 border rounded">
+                                <span>{{ $default['name'] }} ({{ $default['type'] }})</span>
+                                <flux:button wire:click="removeDefault({{ $index }})" variant="ghost" size="sm" icon="trash" color="red" square />
+                            </div>
+                        @empty
+                            <p class="text-sm text-zinc-500">Nenhum padrão cadastrado.</p>
+                        @endforelse
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-2">
+                    <flux:modal.close>
+                        <flux:button variant="ghost">Cancelar</flux:button>
+                    </flux:modal.close>
+                    <flux:button wire:click="generateRecordsFromDefaults" variant="outline">Gerar Registros</flux:button>
+                    <flux:button wire:click="saveDefaults" variant="primary">Salvar</flux:button>
+                </div>
+            @endif
+        </div>
+    </flux:modal>
+
     <flux:modal name="record-types-modal" class="md:w-[700px]">
         <div class="space-y-6">
             <div>
@@ -430,6 +670,26 @@ new class extends CrudComponent
 
             @if($managingRecordTypesId)
                 <div class="space-y-4">
+                    @if(!$this->hasRecords && $this->availablePatterns->isNotEmpty())
+                        <div class="flex items-center gap-2">
+                            <flux:dropdown>
+                                <flux:button variant="subtle" size="sm" icon:trailing="chevron-down">
+                                    {{ __('Adicionar Padrão') }}
+                                </flux:button>
+
+                                <flux:menu>
+                                    @foreach($this->availablePatterns as $pattern)
+                                        <flux:menu.item wire:click="addPattern({{ $pattern->id }})" icon="plus">
+                                            {{ $pattern->name }}
+                                        </flux:menu.item>
+                                    @endforeach
+                                </flux:menu>
+                            </flux:dropdown>
+                        </div>
+
+                        <flux:separator />
+                    @endif
+
                     <div class="flex gap-2 items-start">
                         <flux:field>
                             <flux:input wire:model="newRecordTypeName" placeholder="Nome (ex: Despesa)" size="sm" />
@@ -462,26 +722,28 @@ new class extends CrudComponent
                                     <flux:table.cell><code>{{ $recordType->slug }}</code></flux:table.cell>
                                     <flux:table.cell>{{ $recordType->description ?? '—' }}</flux:table.cell>
                                     <flux:table.cell>
-                                        <flux:badge :color="$recordType->active ? 'green' : 'zinc'" size="sm" inset="top bottom">
-                                            {{ $recordType->active ? 'Ativo' : 'Inativo' }}
+                                        <flux:badge :color="$recordType->status === 'active' ? 'green' : 'zinc'" size="sm" inset="top bottom">
+                                            {{ $recordType->status === 'active' ? 'Ativo' : 'Inativo' }}
                                         </flux:badge>
                                     </flux:table.cell>
                                     <flux:table.cell align="end">
                                         <div class="flex items-center gap-1 justify-end">
-                                            <flux:button wire:click="toggleRecordType({{ $recordType->id }})" variant="ghost" size="sm" :icon="$recordType->active ? 'eye-slash' : 'eye'" square />
-                                            <flux:button wire:click="deleteRecordType({{ $recordType->id }})" variant="ghost" size="sm" icon="trash" color="red" square />
+                                            <flux:button wire:click="manageDefaults({{ $recordType->id }})" variant="ghost" size="sm" icon="adjustments-horizontal" square />
+                                            <flux:button wire:click="toggleRecordType({{ $recordType->id }})" variant="ghost" size="sm" :icon="$recordType->status === 'active' ? 'eye-slash' : 'eye'" square />
+                                            <flux:button wire:click="detachRecordType({{ $recordType->id }})" variant="ghost" size="sm" icon="x-mark" color="red" square />
                                         </div>
                                     </flux:table.cell>
                                 </flux:table.row>
                             @empty
                                 <flux:table.row>
                                     <flux:table.cell colspan="5" class="text-center text-zinc-500 py-4 italic">
-                                        Nenhum tipo de registro cadastrado.
+                                        {{ __('Nenhum tipo de registro cadastrado.') }}
                                     </flux:table.cell>
                                 </flux:table.row>
                             @endforelse
                         </flux:table.rows>
                     </flux:table>
+
                 </div>
             @endif
 
