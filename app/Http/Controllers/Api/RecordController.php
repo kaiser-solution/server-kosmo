@@ -186,13 +186,14 @@ class RecordController extends Controller
 
         if ($search = $request->query('q')) {
             $query->where(function ($q) use ($search) {
-                $q->where('payload->desc', 'like', '%'.$search.'%')
-                    ->orWhere('payload->inst', 'like', '%'.$search.'%');
+                $searchLower = mb_strtolower($search);
+                $q->whereRaw('LOWER(json_extract(payload, "$.desc")) LIKE ?', ['%'.$searchLower.'%'])
+                    ->orWhereRaw('LOWER(json_extract(payload, "$.inst")) LIKE ?', ['%'.$searchLower.'%']);
             });
         }
 
         if ($inst = $request->query('inst')) {
-            $query->where('payload->inst', 'like', '%'.$inst.'%');
+            $query->whereRaw('LOWER(json_extract(payload, "$.inst")) LIKE ?', ['%'.mb_strtolower($inst).'%']);
         }
 
         if ($type = $request->query('type')) {
