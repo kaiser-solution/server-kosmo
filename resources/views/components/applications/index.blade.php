@@ -284,7 +284,7 @@ new class extends CrudComponent
 
     public function addDefaultRecordTypes()
     {
-        // This method is now obsolete if we use patterns, 
+        // This method is now obsolete if we use patterns,
         // but let's keep it for compatibility or refactor it.
         // For now, let's just make it do nothing or remove it.
     }
@@ -442,6 +442,7 @@ new class extends CrudComponent
     #[Computed]
     public function availablePatterns()
     {
+        // dd(RecordPattern::all());
         return RecordPattern::all();
     }
 
@@ -699,7 +700,7 @@ new class extends CrudComponent
                             <flux:input wire:model="newRecordTypeSlug" placeholder="Slug (ex: expense)" size="sm" />
                             <flux:error name="newRecordTypeSlug" />
                         </flux:field>
-                        <flux:field class="flex-1">
+                        <flux:field>
                             <flux:input wire:model="newRecordTypeDescription" placeholder="Descrição (opcional)" size="sm" />
                         </flux:field>
                         <flux:button wire:click="addRecordType" variant="primary" size="sm" icon="plus">Adicionar</flux:button>

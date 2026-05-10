@@ -5,12 +5,20 @@ namespace Tests\Feature;
 use App\Models\Application;
 use App\Models\Record;
 use App\Models\RecordType;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class TransactionTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $user = User::factory()->create();
+        $this->actingAs($user);
+    }
 
     public function test_can_list_record_types_for_valid_namespace(): void
     {

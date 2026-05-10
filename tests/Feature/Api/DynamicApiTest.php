@@ -3,12 +3,20 @@
 namespace Tests\Feature\Api;
 
 use App\Models\Application;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class DynamicApiTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $user = User::factory()->create();
+        $this->actingAs($user);
+    }
 
     public function test_can_access_application_api()
     {

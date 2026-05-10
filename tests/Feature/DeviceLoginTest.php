@@ -68,6 +68,7 @@ class DeviceLoginTest extends TestCase
 
     /**
      * Test login fails if fingerprint belongs to another user.
+     *
      * @todo Implement later
      */
     // public function test_login_fails_if_fingerprint_belongs_to_another_user(): void

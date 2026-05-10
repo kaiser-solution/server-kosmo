@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Application;
 use App\Models\Record;
+use App\Models\RecordPattern;
 use Illuminate\Http\Request;
 
 class RecordController extends Controller
@@ -18,12 +19,141 @@ class RecordController extends Controller
         }
 
         $types = $application->recordTypes()
+            ->with(['recordPatterns' => function ($query) {
+                $query->select('record_patterns.id', 'record_patterns.name', 'record_patterns.defaults');
+            }])
             ->where('status', 'active')
             ->get(['record_types.id', 'record_types.name', 'record_types.slug', 'record_types.description']);
+
+        $types->transform(function ($type) {
+            $type->schema = [
+                'x-institutions' => $type->recordPatterns->map(function ($pattern) {
+                    return array_merge(['name' => $pattern->name], $pattern->defaults ?? []);
+                }),
+            ];
+            unset($type->recordPatterns);
+
+            return $type;
+        });
 
         return response()->json([
             'status' => 'success',
             'data' => $types,
+        ]);
+    }
+
+    public function listInstitutions(string $namespace, string $typeSlug)
+    {
+        $application = Application::where('namespace', $namespace)->first();
+
+        if (! $application) {
+            return response()->json(['message' => 'Application not found'], 404);
+        }
+
+        $recordType = $application->recordTypes()
+            ->where('slug', $typeSlug)
+            ->first();
+
+        if (! $recordType) {
+            return response()->json(['message' => 'Record type not found'], 404);
+        }
+
+        $institutions = $recordType->recordPatterns->map(function ($pattern) {
+            return array_merge(['name' => $pattern->name], $pattern->defaults ?? []);
+        });
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $institutions,
+        ]);
+    }
+
+    public function storeInstitution(Request $request, string $namespace, string $typeSlug)
+    {
+        $application = Application::where('namespace', $namespace)->first();
+        $recordType = $application->recordTypes()->where('slug', $typeSlug)->first();
+
+        if (! $recordType) {
+            return response()->json(['message' => 'Record type not found'], 404);
+        }
+
+        $validated = $request->validate([
+            'name' => 'required|string',
+            'category' => 'nullable|string',
+            'defaultVal' => 'nullable|numeric',
+            'dueDay' => 'nullable|integer',
+            'trackingSince' => 'nullable|string',
+            'createdAt' => 'nullable|string',
+        ]);
+
+        $name = $validated['name'];
+        unset($validated['name']);
+
+        $pattern = RecordPattern::updateOrCreate(
+            ['name' => $name],
+            ['defaults' => $validated]
+        );
+
+        $recordType->recordPatterns()->syncWithoutDetaching([$pattern->id]);
+
+        return response()->json([
+            'status' => 'success',
+            'data' => array_merge(['name' => $pattern->name], $pattern->defaults),
+        ]);
+    }
+
+    public function updateInstitution(Request $request, string $namespace, string $typeSlug, string $name)
+    {
+        $application = Application::where('namespace', $namespace)->first();
+        $recordType = $application->recordTypes()->where('slug', $typeSlug)->first();
+
+        $pattern = $recordType->recordPatterns()->where('name', urldecode($name))->first();
+
+        if (! $pattern) {
+            return response()->json(['message' => 'Institution not found'], 404);
+        }
+
+        $validated = $request->validate([
+            'name' => 'sometimes|string',
+            'category' => 'nullable|string',
+            'defaultVal' => 'nullable|numeric',
+            'dueDay' => 'nullable|integer',
+            'active' => 'nullable|boolean',
+        ]);
+
+        if (isset($validated['name'])) {
+            $pattern->name = $validated['name'];
+            unset($validated['name']);
+        }
+
+        $pattern->defaults = array_merge($pattern->defaults ?? [], $validated);
+        $pattern->save();
+
+        return response()->json([
+            'status' => 'success',
+            'data' => array_merge(['name' => $pattern->name], $pattern->defaults),
+        ]);
+    }
+
+    public function toggleInstitution(string $namespace, string $typeSlug, string $name)
+    {
+        $application = Application::where('namespace', $namespace)->first();
+        $recordType = $application->recordTypes()->where('slug', $typeSlug)->first();
+
+        $pattern = $recordType->recordPatterns()->where('name', urldecode($name))->first();
+
+        if (! $pattern) {
+            return response()->json(['message' => 'Institution not found'], 404);
+        }
+
+        $defaults = $pattern->defaults ?? [];
+        $defaults['active'] = ! ($defaults['active'] ?? true);
+        $pattern->defaults = $defaults;
+        $pattern->save();
+
+        return response()->json([
+            'status' => 'success',
+            'data' => array_merge(['name' => $pattern->name], $pattern->defaults),
         ]);
     }
 

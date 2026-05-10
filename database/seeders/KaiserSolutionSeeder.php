@@ -14,16 +14,16 @@ use App\Models\UserProfile;
 use Hash;
 use Illuminate\Database\Seeder;
 
-class SineedyTattooSeeder extends Seeder
+class KaiserSolutionSeeder extends Seeder
 {
     public function run(): void
     {
         $application = Application::updateOrCreate(
-            ['namespace' => 'sineedy-tattoo'],
+            ['namespace' => 'kaiser-solution'],
             [
-                'name' => 'Sineedy Tattoo',
-                'description' => 'Controle de gastos e receitas do estúdio Sineedy Tattoo.',
-                'endpoint' => '/api/sineedy-tattoo',
+                'name' => 'Kaiser Solution',
+                'description' => 'Controle de gastos e receitas da Empresa Kaiser Solution.',
+                'endpoint' => '/api/kaiser-solution',
             ]
         );
 
@@ -46,7 +46,7 @@ class SineedyTattooSeeder extends Seeder
         AppConfig::updateOrCreate(
             ['application_id' => $application->id],
             [
-                'display_name' => 'Sineedy Tattoo',
+                'display_name' => 'Kaiser Solution',
                 'primary_color' => '#3182ce',
                 'secondary_color' => '#2d3748',
                 'default_currency' => 'BRL',

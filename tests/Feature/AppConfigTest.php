@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\AppConfig;
 use App\Models\Application;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
@@ -11,6 +12,13 @@ use Tests\TestCase;
 class AppConfigTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $user = User::factory()->create();
+        $this->actingAs($user);
+    }
 
     public function test_returns_config_for_valid_namespace(): void
     {

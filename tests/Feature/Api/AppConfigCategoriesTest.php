@@ -13,9 +13,12 @@ class AppConfigCategoriesTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function makeUser(): User
+    protected User $user;
+
+    protected function setUp(): void
     {
-        return User::factory()->create();
+        parent::setUp();
+        $this->user = User::factory()->create();
     }
 
     private function makeApp(string $namespace = 'test-app'): Application
@@ -25,7 +28,6 @@ class AppConfigCategoriesTest extends TestCase
 
     public function test_can_save_categories(): void
     {
-        $user = $this->makeUser();
         $app = $this->makeApp();
 
         $categories = [
@@ -33,7 +35,7 @@ class AppConfigCategoriesTest extends TestCase
             ['name' => 'Estúdio', 'color' => '#8b5cf6'],
         ];
 
-        $response = $this->actingAs($user)
+        $response = $this->actingAs($this->user)
             ->putJson("/api/{$app->namespace}/config/categories", ['categories' => $categories]);
 
         $response->assertOk()
@@ -45,7 +47,6 @@ class AppConfigCategoriesTest extends TestCase
 
     public function test_categories_are_persisted_and_returned_in_config(): void
     {
-        $user = $this->makeUser();
         $app = $this->makeApp('branding-app');
 
         $categories = [
@@ -53,11 +54,12 @@ class AppConfigCategoriesTest extends TestCase
             ['name' => 'Outros', 'color' => '#718096'],
         ];
 
-        $this->actingAs($user)
+        $this->actingAs($this->user)
             ->putJson("/api/{$app->namespace}/config/categories", ['categories' => $categories])
             ->assertOk();
 
-        $response = $this->getJson("/api/{$app->namespace}/config");
+        $response = $this->actingAs($this->user)
+            ->getJson("/api/{$app->namespace}/config");
 
         $response->assertOk()
             ->assertJsonCount(2, 'config.categories');
@@ -69,12 +71,11 @@ class AppConfigCategoriesTest extends TestCase
 
     public function test_saving_categories_invalidates_cache(): void
     {
-        $user = $this->makeUser();
         $app = $this->makeApp('cache-app');
         AppConfig::factory()->create(['application_id' => $app->id]);
         Cache::put("app_config_by_namespace_{$app->namespace}", ['app_name' => 'Cache App'], 86400);
 
-        $this->actingAs($user)
+        $this->actingAs($this->user)
             ->putJson("/api/{$app->namespace}/config/categories", [
                 'categories' => [['name' => 'Casa', 'color' => '#f59e0b']],
             ])
@@ -94,10 +95,9 @@ class AppConfigCategoriesTest extends TestCase
 
     public function test_validates_category_color_format(): void
     {
-        $user = $this->makeUser();
         $app = $this->makeApp();
 
-        $this->actingAs($user)
+        $this->actingAs($this->user)
             ->putJson("/api/{$app->namespace}/config/categories", [
                 'categories' => [['name' => 'Casa', 'color' => 'not-a-color']],
             ])->assertUnprocessable();
@@ -105,10 +105,9 @@ class AppConfigCategoriesTest extends TestCase
 
     public function test_validates_category_name_required(): void
     {
-        $user = $this->makeUser();
         $app = $this->makeApp();
 
-        $this->actingAs($user)
+        $this->actingAs($this->user)
             ->putJson("/api/{$app->namespace}/config/categories", [
                 'categories' => [['color' => '#f59e0b']],
             ])->assertUnprocessable();
@@ -116,9 +115,7 @@ class AppConfigCategoriesTest extends TestCase
 
     public function test_returns_404_for_unknown_namespace(): void
     {
-        $user = $this->makeUser();
-
-        $this->actingAs($user)
+        $this->actingAs($this->user)
             ->putJson('/api/unknown-namespace/config/categories', [
                 'categories' => [['name' => 'Casa', 'color' => '#f59e0b']],
             ])->assertNotFound();
