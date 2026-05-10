@@ -12,8 +12,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('record_types', function (Blueprint $table) {
-            $table->dropUnique('record_types_application_id_slug_unique');
             $table->dropForeign(['application_id']);
+            $table->dropUnique('record_types_application_id_slug_unique');
             $table->dropColumn('application_id');
         });
     }
