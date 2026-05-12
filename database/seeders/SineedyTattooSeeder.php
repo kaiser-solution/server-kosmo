@@ -2,12 +2,14 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
 use App\Models\AppConfig;
 use App\Models\Application;
 use App\Models\Contact;
 use App\Models\Record;
 use App\Models\RecordType;
+use App\Models\UserProfile;
+use App\Models\Plan;
+use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
