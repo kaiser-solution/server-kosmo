@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\User;
 use App\Models\AppConfig;
 use App\Models\Application;
 use App\Models\Contact;
