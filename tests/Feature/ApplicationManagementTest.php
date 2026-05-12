@@ -2,10 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Models\AppConfig;
 use App\Models\Application;
 use App\Models\Permission;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -87,5 +89,47 @@ class ApplicationManagementTest extends TestCase
         $this->assertDatabaseMissing('permissions', [
             'id' => $permission->id,
         ]);
+    }
+
+    public function test_admin_can_save_application_configuration(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $application = Application::create([
+            'name' => 'App Config Test',
+            'namespace' => 'app-config-test',
+            'endpoint' => 'https://config.test',
+        ]);
+
+        Cache::put("app_config_by_namespace_{$application->namespace}", ['stale' => true], 600);
+
+        Livewire::actingAs($admin)
+            ->test('applications.index')
+            ->call('manageConfig', $application->id)
+            ->set('configDisplayName', 'Minha Aplicacao')
+            ->set('configPrimaryColor', '#000001')
+            ->set('configSecondaryColor', '#000001')
+            ->set('configDefaultCurrency', 'BRL')
+            ->set('configCategories', [
+                ['name' => 'Teste', 'color' => '#6366f1'],
+            ])
+            ->call('saveConfig')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('app_configs', [
+            'application_id' => $application->id,
+            'display_name' => 'Minha Aplicacao',
+            'primary_color' => '#000001',
+            'secondary_color' => '#000001',
+            'default_currency' => 'BRL',
+        ]);
+
+        $this->assertFalse(Cache::has("app_config_by_namespace_{$application->namespace}"));
+
+        $config = AppConfig::where('application_id', $application->id)->first();
+
+        $this->assertNotNull($config);
+        $this->assertSame([
+            ['name' => 'Teste', 'color' => '#6366f1'],
+        ], $config->categories);
     }
 }

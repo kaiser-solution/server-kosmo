@@ -86,9 +86,10 @@ new class extends CrudComponent
         $this->modal('config-modal')->show();
     }
 
-    public function saveConfig()
+    public function saveConfig(): void
     {
         $this->validate([
+            'configuringAppId' => 'required|integer|exists:applications,id',
             'configDisplayName' => 'nullable|string|max:255',
             'configPrimaryColor' => 'nullable|string|max:7',
             'configSecondaryColor' => 'nullable|string|max:7',
@@ -98,18 +99,20 @@ new class extends CrudComponent
             'configCategories.*.color' => 'required|string|regex:/^#[0-9a-fA-F]{6}$/',
         ]);
 
-        AppConfig::updateOrCreate(
-            ['application_id' => $this->configuringAppId],
-            [
-                'display_name' => $this->configDisplayName ?: null,
-                'primary_color' => $this->configPrimaryColor,
-                'secondary_color' => $this->configSecondaryColor,
-                'default_currency' => $this->configDefaultCurrency,
-                'categories' => $this->configCategories,
-            ]
-        );
+        $applicationId = (int) $this->configuringAppId;
 
-        $application = Application::find($this->configuringAppId);
+        $config = AppConfig::firstOrNew(['application_id' => $applicationId]);
+        $config->forceFill([
+            'application_id' => $applicationId,
+            'display_name' => $this->configDisplayName ?: null,
+            'primary_color' => $this->configPrimaryColor,
+            'secondary_color' => $this->configSecondaryColor,
+            'default_currency' => $this->configDefaultCurrency,
+            'categories' => $this->configCategories,
+        ]);
+        $config->save();
+
+        $application = Application::find($applicationId);
         if ($application) {
             Cache::forget("app_config_by_namespace_{$application->namespace}");
         }
