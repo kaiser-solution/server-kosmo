@@ -208,6 +208,33 @@ class SineedyTattooSeeder extends Seeder
             );
         }
 
+
+        $user = User::factory()->create([
+            'name' => 'Sidney',
+            'email' => 'rip_sined@hotmail.com',
+            'password' => Hash::make('123456789'),
+        ]);
+
+        $plan = Plan::updateOrCreate(
+            ['name' => 'premium', 'application_id' => $application->id],
+            [
+                'description' => 'Plano Premium do Sineedy Tattoo',
+                'price' => 0,
+                'currency' => 'BRL',
+            ]
+        );
+
+        $user->plans()->syncWithoutDetaching([$plan->id]);
+
+        UserProfile::create([
+            'user_id' => $user->id,
+            'name' => 'Denis',
+            'avatar' => null,
+            'pin' => null,
+        ]);
+
+
+
         $this->command->info('   Fornecedores cadastrados: '.count($suppliers));
         $this->command->info('✅ Sineedy Tattoo seed concluída com sucesso!');
         $this->command->info("   Application: {$application->name} (namespace: {$application->namespace})");
