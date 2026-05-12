@@ -8,6 +8,7 @@ use App\Models\Contact;
 use App\Models\Record;
 use App\Models\RecordType;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
 
 class SineedyTattooSeeder extends Seeder
 {
