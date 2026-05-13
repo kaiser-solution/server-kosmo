@@ -65,16 +65,18 @@ class InstitutionTest extends TestCase
             'category' => 'Utilidades',
             'defaultVal' => 150.00,
             'dueDay' => 10,
+            'tracking_since' => '2026-05',
         ]);
 
         $response->assertCreated()
             ->assertJsonPath('status', 'success')
             ->assertJsonPath('data.name', 'Energia')
             ->assertJsonPath('data.active', true)
+            ->assertJsonPath('data.tracking_since', '2026-05')
             ->assertJsonPath('data.createdAt', now()->format('Y-m'));
     }
 
-    public function test_create_institution_requires_name(): void
+    public function test_can_create_institution_requires_name(): void
     {
         $this->makeAppWithRecordType();
 
@@ -173,6 +175,7 @@ class InstitutionTest extends TestCase
             'category' => 'Cat2',
             'defaultVal' => 20,
             'dueDay' => 15,
+            'tracking_since' => '2026-06',
         ]);
 
         $response->assertOk()
@@ -180,11 +183,13 @@ class InstitutionTest extends TestCase
             ->assertJsonPath('data.name', 'Nova')
             ->assertJsonPath('data.category', 'Cat2')
             ->assertJsonPath('data.defaultVal', 20)
-            ->assertJsonPath('data.dueDay', 15);
+            ->assertJsonPath('data.dueDay', 15)
+            ->assertJsonPath('data.tracking_since', '2026-06');
 
         $this->getJson('/api/test-app/institutions/recurring-bill')
             ->assertJsonCount(1, 'data')
-            ->assertJsonPath('data.0.name', 'Nova');
+            ->assertJsonPath('data.0.name', 'Nova')
+            ->assertJsonPath('data.0.tracking_since', '2026-06');
     }
 
     public function test_update_institution_rejects_duplicate_new_name(): void

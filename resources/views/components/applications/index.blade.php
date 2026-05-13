@@ -3,36 +3,59 @@
 use App\Livewire\Abstracts\CrudComponent;
 use App\Models\AppConfig;
 use App\Models\Application;
+use App\Models\Permission;
 use App\Models\RecordType;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Str;
 use Livewire\Attributes\Computed;
 
 new class extends CrudComponent
 {
     public string $modelClass = Application::class;
+
     public string $pageTitle = 'Gerenciamento de Aplicações';
+
     public string $newButtonTitle = 'Nova Aplicação';
+
     public string $searchPlaceholder = 'Buscar aplicações...';
+
     public string $editModalTitle = 'Editar Aplicação';
+
     public string $createModalTitle = 'Nova Aplicação';
+
     public string $deleteModalTitle = 'Excluir Aplicação';
+
     public ?int $managingPermissionsId = null;
+
     public string $newPermissionName = '';
+
     public string $newPermissionSlug = '';
 
     public ?int $configuringAppId = null;
+
     public string $configDisplayName = '';
+
     public string $configPrimaryColor = '#000000';
+
     public string $configSecondaryColor = '#000000';
+
     public string $configDefaultCurrency = 'BRL';
+
     public array $configCategories = [];
+
     public string $newCategoryName = '';
+
     public string $newCategoryColor = '#6366f1';
 
     public ?int $managingRecordTypesId = null;
+
+    public ?int $managingInstitutionsId = null;
+
+    public array $configInstitutions = [];
+
     public string $newRecordTypeName = '';
+
     public string $newRecordTypeSlug = '';
+
     public string $newRecordTypeDescription = '';
 
     public array $columnsToDisplay = [
@@ -54,7 +77,7 @@ new class extends CrudComponent
             'newPermissionSlug' => 'required|string|max:255|unique:permissions,slug',
         ]);
 
-        \App\Models\Permission::create([
+        Permission::create([
             'name' => $this->newPermissionName,
             'slug' => $this->newPermissionSlug,
             'application_id' => $this->managingPermissionsId,
@@ -65,7 +88,7 @@ new class extends CrudComponent
 
     public function deletePermission($id)
     {
-        \App\Models\Permission::find($id)?->delete();
+        Permission::find($id)?->delete();
     }
 
     public function manageConfig($id)
@@ -120,6 +143,24 @@ new class extends CrudComponent
         $this->modal('config-modal')->close();
     }
 
+    public function applyDefaults(): void
+    {
+        $this->configCategories = [
+            ['name' => 'Assinaturas',    'color' => '#6366f1'],
+            ['name' => 'Cartões',        'color' => '#ec4899'],
+            ['name' => 'Casa',           'color' => '#f59e0b'],
+            ['name' => 'Comunicação',    'color' => '#06b6d4'],
+            ['name' => 'Manutenção',     'color' => '#64748b'],
+            ['name' => 'Material Tattoo', 'color' => '#0ea5e9'],
+            ['name' => 'MEI / Impostos', 'color' => '#ef4444'],
+            ['name' => 'Saúde',          'color' => '#10b981'],
+            ['name' => 'Segurança',      'color' => '#d97706'],
+            ['name' => 'Terreno',        'color' => '#78716c'],
+            ['name' => 'Transporte',     'color' => '#3b82f6'],
+            ['name' => 'Outros',         'color' => '#718096'],
+        ];
+    }
+
     public function addCategory(): void
     {
         $this->validate([
@@ -132,6 +173,7 @@ new class extends CrudComponent
         $exists = collect($this->configCategories)->contains(fn ($c) => strtolower($c['name']) === strtolower($name));
         if ($exists) {
             $this->addError('newCategoryName', 'Esta categoria já existe.');
+
             return;
         }
 
@@ -201,6 +243,40 @@ new class extends CrudComponent
         RecordType::find($id)?->delete();
     }
 
+    public function manageInstitutions($id)
+    {
+        $this->managingInstitutionsId = $id;
+        $type = RecordType::find($id);
+        $this->configInstitutions = $type->schema['x-institutions'] ?? [];
+        $this->modal('institutions-modal')->show();
+    }
+
+    public function saveInstitutions()
+    {
+        $type = RecordType::find($this->managingInstitutionsId);
+        $schema = $type->schema ?? [];
+        $schema['x-institutions'] = $this->configInstitutions;
+        $type->schema = $schema;
+        $type->save();
+        $this->modal('institutions-modal')->close();
+    }
+
+    public function removeInstitution(int $index)
+    {
+        array_splice($this->configInstitutions, $index, 1);
+    }
+
+    public function addInstitution()
+    {
+        $this->configInstitutions[] = [
+            'name' => '',
+            'defaultVal' => 0,
+            'dueDay' => 1,
+            'category' => '',
+            'tracking_since' => now()->format('Y-m'),
+        ];
+    }
+
     #[Computed]
     public function currentRecordTypes()
     {
@@ -212,16 +288,38 @@ new class extends CrudComponent
     }
 
     #[Computed]
+    public function availableCategories()
+    {
+        if (! $this->managingInstitutionsId) {
+            return [];
+        }
+        $type = RecordType::find($this->managingInstitutionsId);
+        if (! $type) {
+            return [];
+        }
+        $config = AppConfig::where('application_id', $type->application_id)->first();
+        if (! $config) {
+            return [];
+        }
+        $categories = $config->categories;
+
+        return is_array($categories) ? $categories : (json_decode($categories, true) ?? []);
+    }
+
+    #[Computed]
     public function currentApplicationPermissions()
     {
-        if (!$this->managingPermissionsId) return [];
-        return \App\Models\Permission::where('application_id', $this->managingPermissionsId)->get();
+        if (! $this->managingPermissionsId) {
+            return [];
+        }
+
+        return Permission::where('application_id', $this->managingPermissionsId)->get();
     }
 
     #[Computed]
     public function availablePermissions()
     {
-        return \App\Models\Permission::all();
+        return Permission::all();
     }
 
     #[Computed]
@@ -229,9 +327,8 @@ new class extends CrudComponent
     {
         return $this->modelClass::query()
             ->withCount('permissions')
-            ->when($this->q, fn ($q) =>
-                $q->where('name', 'like', "%{$this->q}%")
-                  ->orWhere('endpoint', 'like', "%{$this->q}%")
+            ->when($this->q, fn ($q) => $q->where('name', 'like', "%{$this->q}%")
+                ->orWhere('endpoint', 'like', "%{$this->q}%")
             )
             ->paginate(10);
     }
@@ -372,6 +469,7 @@ new class extends CrudComponent
             @endif
 
             <div class="flex justify-end gap-2">
+                <flux:button wire:click="applyDefaults" variant="subtle" size="sm">Aplicar Padrões</flux:button>
                 <flux:modal.close>
                     <flux:button variant="ghost">Cancelar</flux:button>
                 </flux:modal.close>
@@ -410,7 +508,6 @@ new class extends CrudComponent
                         <flux:table.columns>
                             <flux:table.column>Nome</flux:table.column>
                             <flux:table.column>Slug</flux:table.column>
-                            <flux:table.column>Descrição</flux:table.column>
                             <flux:table.column>Status</flux:table.column>
                             <flux:table.column align="end">Ações</flux:table.column>
                         </flux:table.columns>
@@ -419,7 +516,6 @@ new class extends CrudComponent
                                 <flux:table.row :key="$recordType->id">
                                     <flux:table.cell>{{ $recordType->name }}</flux:table.cell>
                                     <flux:table.cell><code>{{ $recordType->slug }}</code></flux:table.cell>
-                                    <flux:table.cell>{{ $recordType->description ?? '—' }}</flux:table.cell>
                                     <flux:table.cell>
                                         <flux:badge :color="$recordType->active ? 'green' : 'zinc'" size="sm" inset="top bottom">
                                             {{ $recordType->active ? 'Ativo' : 'Inativo' }}
@@ -427,6 +523,7 @@ new class extends CrudComponent
                                     </flux:table.cell>
                                     <flux:table.cell align="end">
                                         <div class="flex items-center gap-1 justify-end">
+                                            <flux:button wire:click="manageInstitutions({{ $recordType->id }})" variant="ghost" size="sm" icon="building-library" square />
                                             <flux:button wire:click="toggleRecordType({{ $recordType->id }})" variant="ghost" size="sm" :icon="$recordType->active ? 'eye-slash' : 'eye'" square />
                                             <flux:button wire:click="deleteRecordType({{ $recordType->id }})" variant="ghost" size="sm" icon="trash" color="red" square />
                                         </div>
@@ -434,7 +531,7 @@ new class extends CrudComponent
                                 </flux:table.row>
                             @empty
                                 <flux:table.row>
-                                    <flux:table.cell colspan="5" class="text-center text-zinc-500 py-4 italic">
+                                    <flux:table.cell colspan="4" class="text-center text-zinc-500 py-4 italic">
                                         Nenhum tipo de registro cadastrado.
                                     </flux:table.cell>
                                 </flux:table.row>
@@ -448,6 +545,73 @@ new class extends CrudComponent
                 <flux:modal.close>
                     <flux:button variant="ghost">Fechar</flux:button>
                 </flux:modal.close>
+            </div>
+        </div>
+    </flux:modal>
+
+    <flux:modal name="institutions-modal" class="!w-[1200px] !max-w-none">
+        <div class="space-y-6">
+            <div>
+                <flux:heading size="lg">Gerenciar Instituições (x-institutions)</flux:heading>
+            </div>
+
+            @if($managingInstitutionsId)
+                <div class="space-y-4">
+                    <flux:table>
+                        <flux:table.columns>
+                            <flux:table.column width="250px">Nome</flux:table.column>
+                            <flux:table.column>Valor Padrão</flux:table.column>
+                            <flux:table.column>Dia Venc.</flux:table.column>
+                            <flux:table.column>Categoria</flux:table.column>
+                            <flux:table.column>Desde</flux:table.column>
+                            <flux:table.column align="end">Ações</flux:table.column>
+                        </flux:table.columns>
+                        <flux:table.rows>
+                            @forelse($configInstitutions as $i => $inst)
+                                <flux:table.row :key="$i">
+                                    <flux:table.cell>
+                                        <flux:input wire:model.live="configInstitutions.{{ $i }}.name" size="sm" class="w-full" />
+                                    </flux:table.cell>
+                                    <flux:table.cell>
+                                        <flux:input wire:model.live="configInstitutions.{{ $i }}.defaultVal" type="number" size="sm" />
+                                    </flux:table.cell>
+                                    <flux:table.cell>
+                                        <flux:input wire:model.live="configInstitutions.{{ $i }}.dueDay" type="number" size="sm" />
+                                    </flux:table.cell>
+                                    <flux:table.cell>
+                                        <flux:select wire:model.live="configInstitutions.{{ $i }}.category" size="sm">
+                                            <flux:select.option value="">Selecione...</flux:select.option>
+                                            @foreach($this->availableCategories as $category)
+                                                <flux:select.option value="{{ $category['name'] }}">{{ $category['name'] }}</flux:select.option>
+                                            @endforeach
+                                        </flux:select>
+                                    </flux:table.cell>
+                                    <flux:table.cell>
+                                        <flux:input wire:model.live="configInstitutions.{{ $i }}.tracking_since" type="month" size="sm" />
+                                    </flux:table.cell>
+                                    <flux:table.cell align="end">
+                                        <flux:button wire:click="removeInstitution({{ $i }})" variant="ghost" size="sm" icon="trash" color="red" square />
+                                    </flux:table.cell>
+                                </flux:table.row>
+                            @empty
+                                <flux:table.row>
+                                    <flux:table.cell colspan="6" class="text-center text-zinc-500 py-4 italic">
+                                        Nenhuma instituição cadastrada.
+                                    </flux:table.cell>
+                                </flux:table.row>
+                            @endforelse
+                        </flux:table.rows>
+                    </flux:table>
+                    
+                    <flux:button wire:click="addInstitution" variant="ghost" size="sm" icon="plus">Adicionar Instituição</flux:button>
+                </div>
+            @endif
+
+            <div class="flex justify-end gap-2">
+                <flux:modal.close>
+                    <flux:button variant="ghost">Cancelar</flux:button>
+                </flux:modal.close>
+                <flux:button wire:click="saveInstitutions" variant="primary">Salvar</flux:button>
             </div>
         </div>
     </flux:modal>

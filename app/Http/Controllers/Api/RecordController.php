@@ -192,6 +192,7 @@ class RecordController extends Controller
             'category' => 'nullable|string|max:255',
             'defaultVal' => 'nullable|numeric',
             'dueDay' => 'nullable|integer|min:1|max:31',
+            'tracking_since' => 'nullable|string|date_format:Y-m',
         ]);
 
         $schema = $recordType->schema ?? [];
@@ -212,6 +213,7 @@ class RecordController extends Controller
                 $institutions[$existingIndex]['category'] = $validated['category'] ?? null;
                 $institutions[$existingIndex]['defaultVal'] = isset($validated['defaultVal']) ? (float) $validated['defaultVal'] : null;
                 $institutions[$existingIndex]['dueDay'] = isset($validated['dueDay']) ? (int) $validated['dueDay'] : null;
+                $institutions[$existingIndex]['tracking_since'] = $validated['tracking_since'] ?? null;
 
                 $schema['x-institutions'] = $institutions;
                 $recordType->schema = $schema;
@@ -231,6 +233,7 @@ class RecordController extends Controller
             'category' => $validated['category'] ?? null,
             'defaultVal' => isset($validated['defaultVal']) ? (float) $validated['defaultVal'] : null,
             'dueDay' => isset($validated['dueDay']) ? (int) $validated['dueDay'] : null,
+            'tracking_since' => $validated['tracking_since'] ?? null,
             'active' => true,
             'createdAt' => now()->format('Y-m'),
         ];
@@ -334,6 +337,7 @@ class RecordController extends Controller
             'category' => 'nullable|string|max:255',
             'defaultVal' => 'nullable|numeric',
             'dueDay' => 'nullable|integer|min:1|max:31',
+            'tracking_since' => 'nullable|string|date_format:Y-m',
         ]);
 
         $schema = $recordType->schema ?? [];
@@ -356,6 +360,7 @@ class RecordController extends Controller
                 $inst['category'] = $validated['category'] ?? null;
                 $inst['defaultVal'] = isset($validated['defaultVal']) ? (float) $validated['defaultVal'] : null;
                 $inst['dueDay'] = isset($validated['dueDay']) ? (int) $validated['dueDay'] : null;
+                $inst['tracking_since'] = $validated['tracking_since'] ?? null;
                 $updated = $inst;
                 $found = true;
                 break;

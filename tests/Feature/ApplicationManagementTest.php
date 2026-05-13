@@ -132,4 +132,33 @@ class ApplicationManagementTest extends TestCase
             ['name' => 'Teste', 'color' => '#6366f1'],
         ], $config->categories);
     }
+
+    public function test_admin_can_apply_default_categories(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $application = Application::create([
+            'name' => 'App Config Test',
+            'namespace' => 'app-config-test',
+            'endpoint' => 'https://config.test',
+        ]);
+
+        Livewire::actingAs($admin)
+            ->test('applications.index')
+            ->call('manageConfig', $application->id)
+            ->call('applyDefaults')
+            ->assertSet('configCategories', [
+                ['name' => 'Assinaturas',    'color' => '#6366f1'],
+                ['name' => 'Cartões',        'color' => '#ec4899'],
+                ['name' => 'Casa',           'color' => '#f59e0b'],
+                ['name' => 'Comunicação',    'color' => '#06b6d4'],
+                ['name' => 'Manutenção',     'color' => '#64748b'],
+                ['name' => 'Material Tattoo', 'color' => '#0ea5e9'],
+                ['name' => 'MEI / Impostos', 'color' => '#ef4444'],
+                ['name' => 'Saúde',          'color' => '#10b981'],
+                ['name' => 'Segurança',      'color' => '#d97706'],
+                ['name' => 'Terreno',        'color' => '#78716c'],
+                ['name' => 'Transporte',     'color' => '#3b82f6'],
+                ['name' => 'Outros',         'color' => '#718096'],
+            ]);
+    }
 }
