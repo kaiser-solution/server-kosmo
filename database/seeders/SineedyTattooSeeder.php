@@ -28,18 +28,21 @@ class SineedyTattooSeeder extends Seeder
         $trackingSinceDefault ='2026-04';
 
         $defaultCategories = [
-            ['name' => 'Assinaturas',    'color' => '#6366f1'],
-            ['name' => 'Cartões',        'color' => '#ec4899'],
-            ['name' => 'Casa',           'color' => '#f59e0b'],
-            ['name' => 'Comunicação',    'color' => '#06b6d4'],
-            ['name' => 'Manutenção',     'color' => '#64748b'],
-            ['name' => 'Material Tattoo', 'color' => '#0ea5e9'],
-            ['name' => 'MEI / Impostos', 'color' => '#ef4444'],
+            ['name' => 'Assinaturas',    'color' => '#5234eb'],
+            ['name' => 'Cartões',        'color' => '#eb3452'],
+            ['name' => 'Gastos Pessoais','color' => '#34eb3a'],
+
+            ['name' => 'Comunicação',    'color' => '#0ea5e9'],
+            ['name' => 'Manutenção',     'color' => '#f59e0b'],
+
+
+            ['name' => 'Tributo', 'color' => '#8b5cf6'],
+            
             ['name' => 'Saúde',          'color' => '#10b981'],
-            ['name' => 'Segurança',      'color' => '#d97706'],
-            ['name' => 'Terreno',        'color' => '#78716c'],
-            ['name' => 'Transporte',     'color' => '#3b82f6'],
-            ['name' => 'Outros',         'color' => '#718096'],
+            ['name' => 'Segurança',      'color' => '#64748b'],
+            ['name' => 'Transporte',     'color' => '#e5eb34'],
+            ['name' => 'Retiradas',      'color' => '#ec4899'],
+            ['name' => 'Outros',         'color' => '#0d0d06'],
         ];
 
         AppConfig::updateOrCreate(
@@ -85,6 +88,7 @@ class SineedyTattooSeeder extends Seeder
                         ['name' => 'Material',             'defaultVal' => null,    'type' => 'expense', 'category' => 'Estúdio'],
                         ['name' => 'Farmácia',             'defaultVal' => null,    'type' => 'expense', 'category' => 'Saúde'],
                         ['name' => 'Restaurante / Lanche', 'defaultVal' => null,    'type' => 'expense', 'category' => 'Estúdio'],
+                        ['name' => '99 / Uber',            'defaultVal' => null,    'type' => 'expense', 'category' => 'Transporte'],
                     ],
                 ],
             ],
@@ -113,7 +117,7 @@ class SineedyTattooSeeder extends Seeder
                         ['name' => 'Internet Fibra Estudio',   'defaultVal' => 125.00,  'dueDay' => 30,  'category' => 'Estúdio', 'tracking_since' => $trackingSinceDefault],
                         ['name' => 'Plano de Celular',         'defaultVal' => 65.00,   'dueDay' => 20,  'category' => 'Comunicação', 'tracking_since' => $trackingSinceDefault],
                         ['name' => 'Alarme Casa e Estudio',    'defaultVal' => 200.00,  'dueDay' => 15,  'category' => 'Segurança', 'tracking_since' => $trackingSinceDefault],
-                        ['name' => 'Parcela Terreno',          'defaultVal' => 2940.00, 'dueDay' => 28,  'category' => 'Terreno', 'tracking_since' => $trackingSinceDefault],
+                        ['name' => 'Parcela Terreno',          'defaultVal' => 2940.00, 'dueDay' => 28,  'category' => 'Gastos Pessoais', 'tracking_since' => $trackingSinceDefault],
                         ['name' => 'Parcela Carro',            'defaultVal' => 1000.00, 'dueDay' => 10,  'category' => 'Transporte', 'tracking_since' => $trackingSinceDefault],
                         ['name' => 'Convênio Médico',          'defaultVal' => 76.00,   'dueDay' => 20,  'category' => 'Saúde', 'tracking_since' => $trackingSinceDefault],
                         ['name' => 'Serviços de Software',     'defaultVal' => 100.00,  'dueDay' => 20,  'category' => 'Assinaturas', 'tracking_since' => $trackingSinceDefault],
@@ -124,8 +128,8 @@ class SineedyTattooSeeder extends Seeder
                         ['name' => 'Telefone Denis',           'defaultVal' => 44.00,   'dueDay' => 10,  'category' => 'Comunicação', 'tracking_since' => $trackingSinceDefault],
                         ['name' => 'Telefone Erika',           'defaultVal' => 39.00,   'dueDay' => 26,  'category' => 'Comunicação', 'tracking_since' => $trackingSinceDefault],
                         ['name' => 'Assinatura Netflix',       'defaultVal' => 60.00,   'dueDay' => 10,  'category' => 'Assinaturas', 'tracking_since' => $trackingSinceDefault],
-                        ['name' => 'MEI Negociação Atrasados', 'defaultVal' => 110.00,  'dueDay' => 30,  'category' => 'MEI / Impostos', 'tracking_since' => $trackingSinceDefault],
-                        ['name' => 'MEI',                      'defaultVal' => 86.00,   'dueDay' => 20,  'category' => 'MEI / Impostos', 'tracking_since' => $trackingSinceDefault],
+                        ['name' => 'MEI Negociação Atrasados', 'defaultVal' => 110.00,  'dueDay' => 30,  'category' => 'Tributo', 'tracking_since' => $trackingSinceDefault],
+                        ['name' => 'MEI',                      'defaultVal' => 86.00,   'dueDay' => 20,  'category' => 'Tributo', 'tracking_since' => $trackingSinceDefault],
                         ['name' => 'Clube de Assinaturas',     'defaultVal' => 200.00,  'dueDay' => 10,  'category' => 'Assinaturas', 'tracking_since' => $trackingSinceDefault],
                     ],
                 ],
